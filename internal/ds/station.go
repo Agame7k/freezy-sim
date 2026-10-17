@@ -189,6 +189,7 @@ type Station struct {
 	lastFmsLinked bool
 	lastLinked    bool
 	lastEnabled   bool
+	lastAuto      bool // the mode that went to the robot with lastEnabled (both change together, once per tick)
 	messages      []ConsoleMessage
 
 	// Driver Station extras (see State).
@@ -468,6 +469,7 @@ func (station *Station) tick(now time.Time, dt float64) {
 		}
 		station.lastEnabled = enabled
 	}
+	station.lastAuto = control.Auto
 	if enabled {
 		station.elapsed = now.Sub(station.enabledAt).Seconds()
 	}
@@ -555,26 +557,31 @@ func (station *Station) readControl(conn *net.UDPConn) {
 			station.mu.Unlock()
 			return
 		}
-		if !station.controlAt.IsZero() {
-			if gap := now.Sub(station.controlAt); gap > station.maxControlGap && station.controlCount > 2 {
-				station.maxControlGap = gap
-			}
-		}
-		if control.Enabled != station.control.Enabled || control.Auto != station.control.Auto ||
-			control.EStop != station.control.EStop || control.AStop != station.control.AStop {
-			if station.onPacket != nil {
-				station.onPacket("in", "fms-control", station.Name, control.Raw)
-			}
-		}
-		station.control = control
-		station.controlAt = now
-		station.controlCount++
-		station.controlTimes = append(station.controlTimes, now)
-		cutoff := now.Add(-controlRateWindowMs * time.Millisecond)
-		for len(station.controlTimes) > 0 && station.controlTimes[0].Before(cutoff) {
-			station.controlTimes = station.controlTimes[1:]
-		}
+		station.storeControlLocked(control, now)
 		station.mu.Unlock()
+	}
+}
+
+// storeControlLocked keeps an FMS control packet as it arrives; the next tick applies it to the robot.
+func (station *Station) storeControlLocked(control ControlPacket, now time.Time) {
+	if !station.controlAt.IsZero() {
+		if gap := now.Sub(station.controlAt); gap > station.maxControlGap && station.controlCount > 2 {
+			station.maxControlGap = gap
+		}
+	}
+	if control.Enabled != station.control.Enabled || control.Auto != station.control.Auto ||
+		control.EStop != station.control.EStop || control.AStop != station.control.AStop {
+		if station.onPacket != nil {
+			station.onPacket("in", "fms-control", station.Name, control.Raw)
+		}
+	}
+	station.control = control
+	station.controlAt = now
+	station.controlCount++
+	station.controlTimes = append(station.controlTimes, now)
+	cutoff := now.Add(-controlRateWindowMs * time.Millisecond)
+	for len(station.controlTimes) > 0 && station.controlTimes[0].Before(cutoff) {
+		station.controlTimes = station.controlTimes[1:]
 	}
 }
 
@@ -686,12 +693,12 @@ func (station *Station) tcpWriter(session *tcpSession) {
 			station.mu.Lock()
 			mode := byte(DsModeDisabled)
 			if station.lastEnabled {
-				if station.control.Auto {
+				if station.lastAuto {
 					mode = DsModeAuto
 				} else {
 					mode = DsModeTeleop
 				}
-			} else if station.control.Auto {
+			} else if station.lastAuto {
 				mode |= DsModeAuto
 			} else {
 				mode |= DsModeTeleop
@@ -822,11 +829,11 @@ func (station *Station) snapshot(now time.Time) State {
 		mode = "No Robot Code"
 	case station.robot.Brownout:
 		mode = "Voltage Brownout"
-	case station.lastEnabled && control.Auto:
+	case station.lastEnabled && station.lastAuto:
 		mode = "Autonomous Enabled"
 	case station.lastEnabled:
 		mode = "Teleoperated Enabled"
-	case control.Auto:
+	case station.lastAuto:
 		mode = "Autonomous Disabled"
 	default:
 		mode = "Teleoperated Disabled"
@@ -834,7 +841,7 @@ func (station *Station) snapshot(now time.Time) State {
 	reported := "disabled"
 	if station.lastEnabled {
 		reported = "teleop"
-		if control.Auto {
+		if station.lastAuto {
 			reported = "auto"
 		}
 	}
@@ -857,7 +864,7 @@ func (station *Station) snapshot(now time.Time) State {
 		AssignStation: station.assignStation, AssignStatus: station.assignStatus, AssignText: station.assignText,
 		EventName: station.eventName, FmsLinked: fmsLinked, ControlCount: station.controlCount,
 		ControlRateHz: rate, ControlGapMs: gap, MaxControlGap: int(station.maxControlGap.Milliseconds()),
-		GameData: station.gameData, Enabled: station.lastEnabled, Auto: control.Auto,
+		GameData: station.gameData, Enabled: station.lastEnabled, Auto: station.lastAuto,
 		EStopped: station.robot.EStopLatched || control.EStop, AStopped: control.AStop, ModeText: mode,
 		DsReportedMode: reported, Control: control,
 		Messages:       append([]ConsoleMessage(nil), station.messages...),
@@ -881,12 +888,14 @@ func matchLabel(control ControlPacket) string {
 	return fmt.Sprintf("%s%d", prefix, control.MatchNumber)
 }
 
-// Command returns the robot-facing view of the DS (used by robot behavior; it never peeks at arena state).
+// Command returns the robot-facing view of the DS (used by robot behavior; it never peeks at arena state). Enabled and
+// Auto are what the DS last sent the robot, together: a control packet that has arrived but not yet been applied must
+// not pair the old enable with the new mode (at the end of AUTO that read as a moment of enabled TELEOP).
 func (station *Station) Command() Command {
 	station.mu.Lock()
 	defer station.mu.Unlock()
 	return Command{
-		Team: station.team, Enabled: station.lastEnabled, Auto: station.control.Auto,
+		Team: station.team, Enabled: station.lastEnabled, Auto: station.lastAuto,
 		EStop: station.robot.EStopLatched, AStop: station.control.AStop, FmsLinked: station.lastFmsLinked,
 		RobotLinked: station.lastLinked, GameData: station.gameData,
 		RemainingSeconds: station.control.RemainingSeconds, MatchType: station.control.MatchType,

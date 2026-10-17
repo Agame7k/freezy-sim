@@ -1,0 +1,7 @@
+# Keep LF in the working tree on every platform. Windows checkouts default to core.autocrlf=true, which rewrites
+# files to CRLF and makes `gofmt -l` (run in CI on windows-latest) flag every Go file.
+* text=auto eol=lf
+
+# Batch files need CRLF for cmd.exe.
+*.cmd text eol=crlf
+*.bat text eol=crlf
