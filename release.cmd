@@ -37,8 +37,10 @@ rem FIRST's field CAD is never shipped (docs/FIELD_MODEL.md): it is not embedded
 
 rem Windows' tar.exe (bsdtar, Windows 10 1803+) writes standard "/" zip paths; Compress-Archive and .NET's ZipFile in
 rem Windows PowerShell write "\", which other systems unpack wrongly. The zip holds one folder named after the release.
-where tar >nul 2>&1 || (echo tar.exe not found: it ships with Windows 10 1803 and later & exit /b 1)
-tar -a -c -f "dist\%NAME%.zip" -C dist "%NAME%" || exit /b 1
+rem Call it by full path: Git for Windows (and GitHub's runners) put GNU tar on PATH, which can't write zips.
+set TAR=%SystemRoot%\System32\tar.exe
+if not exist "%TAR%" (echo %TAR% not found: it ships with Windows 10 1803 and later & exit /b 1)
+"%TAR%" -a -c -f "dist\%NAME%.zip" -C dist "%NAME%" || exit /b 1
 powershell -NoProfile -Command "$h = (Get-FileHash 'dist\%NAME%.zip' -Algorithm SHA256).Hash.ToLower(); Set-Content -Encoding ascii 'dist\%NAME%.zip.sha256' ($h + '  %NAME%.zip')" || exit /b 1
 "%STAGE%\freezy-sim.exe" -version
 echo Wrote dist\%NAME%.zip

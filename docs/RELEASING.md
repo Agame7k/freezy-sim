@@ -1,12 +1,15 @@
 # Releasing
 
-A checklist for publishing a version. The version number goes into the exe at build time (`release.cmd <version>`);
-the source default in `internal/version/version.go` is the next version with `-dev` after it.
+A checklist for publishing a version. Pushing a tag like `v0.2.0` runs the **Release** workflow
+(`.github/workflows/release.yml`), which builds the zip and publishes the GitHub release. The version number goes into
+the exe at build time (`release.cmd <version>`); the source default in `internal/version/version.go` is the next
+version with `-dev` after it.
 
 ## 1. Before you build
 
 - [ ] `CHANGELOG.md`: the version's heading has today's date instead of "not yet released" (or, for later versions,
-  the "Unreleased" notes have moved under a new version heading).
+  the "Unreleased" notes have moved under a new version heading). The heading must start `## [0.2.0]`: the Release
+  workflow uses that section as the release notes, and fails if it's missing.
 - [ ] Docs: check that the README and `docs/` match what the release does (new flags, config keys, tests).
 - [ ] `git status` shows only what you mean to publish. These must **never** be committed, and `.gitignore` covers them:
   - `freezy-sim.json` (local paths, maybe passwords)
@@ -60,7 +63,10 @@ the source default in `internal/version/version.go` is the next version with `-d
 - [ ] If physics or AI changed: `freezy-sim.exe -suite ai -bench-matches 40 -bench-seed 21`, compared with the baseline.
 - [ ] If possible, the suite against upstream Cheesy Arena (`plc` profile). Note the result in the release notes.
 
-## 4. Build
+## 4. Build a local copy to smoke-test
+
+The Release workflow builds the published zip, but build the same thing locally first so you can test it before
+tagging:
 
 ```bash
 release.cmd 0.1.0
@@ -85,13 +91,37 @@ This checks formatting, vet and tests, then builds a trimmed, stamped exe. It wr
 
 ## 6. Publish
 
-These steps are yours. Nothing in the repo does them automatically.
+1. Commit and push the branch, and wait for the "Tests" workflow to pass.
+2. Tag the release with a lowercase `v` and push the tag:
 
-1. Commit, then tag the release: `git tag v0.1.0`.
-2. Push the branch and the tag.
-3. On GitHub, draft a release from the tag. Title it `v0.1.0`, paste that version's changelog section, and attach the
-   zip and the `.sha256` file.
-4. First release only, in the repository settings:
+   ```bash
+   git tag v0.2.0
+   ```
+
+   ```bash
+   git push origin v0.2.0
+   ```
+
+3. The **Release** workflow (Actions tab) then:
+   - checks the tag looks like `v1.2.3` or `v1.2.3-rc.1`
+   - takes the `## [1.2.3]` section of `CHANGELOG.md` as the release notes
+   - runs `release.cmd` (format, vet, tests, build, zip, checksum)
+   - creates the GitHub release titled with the tag, and attaches the zip and the `.sha256` file
+
+   A tag with a suffix (`v0.2.0-rc.1`) is published as a pre-release; a plain version is a normal release.
+4. If the workflow fails, fix the problem, then move the tag and push it again:
+
+   ```bash
+   git tag -f v0.2.0
+   ```
+
+   ```bash
+   git push -f origin v0.2.0
+   ```
+
+   If it got as far as creating the release, delete that release on GitHub first.
+5. Open the release on GitHub and check the notes and the two files.
+6. First release only, in the repository settings:
    - Description: "A simulated 2026 FRC field for testing Freezy Arena / Cheesy Arena without field hardware"
    - Topics: `frc`, `first-robotics`, `fms`, `cheesy-arena`, `simulator`, `testing`
    - Turn on Issues, and **Private vulnerability reporting** (Security → Advisories), which SECURITY.md points to

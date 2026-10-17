@@ -1,0 +1,85 @@
+# Publishes a GitHub release when a version tag is pushed: git tag v0.2.0 && git push origin v0.2.0
+# It builds the zip with release.cmd (which checks formatting, vet and tests first), takes the release notes from that
+# version's CHANGELOG.md section, and attaches the zip and its .sha256. See docs/RELEASING.md.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Read the version from the tag
+        id: version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag $tag is not a version like v1.2.3 or v1.2.3-rc.1"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # A version with a suffix (0.2.0-rc.1) is a pre-release; 0.2.0 is a normal release.
+          if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Take the release notes from CHANGELOG.md
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Everything under "## [<version>]" up to the next "## [" heading.
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::CHANGELOG.md has no \"## [$VERSION]\" section (or it is empty)"
+            exit 1
+          fi
+          {
+            echo
+            echo "---"
+            echo "Download \`freezy-sim-v$VERSION-windows-amd64.zip\`, unzip it, and run \`freezy-sim.exe\`. Start with"
+            echo "[Getting started](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/GETTING_STARTED.md)."
+            echo "The \`.sha256\` file holds the zip's SHA-256 checksum."
+          } >> release-notes.md
+
+      - name: Build the release zip
+        shell: cmd
+        run: .\release.cmd ${{ steps.version.outputs.version }}
+
+      - name: Publish the GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          name="freezy-sim-v$VERSION-windows-amd64"
+          flags=()
+          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md \
+            "${flags[@]}" \
+            "dist/$name.zip" "dist/$name.zip.sha256"

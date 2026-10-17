@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/Agame7k/freezy-sim/actions/workflows/test.yml"><img alt="Tests" src="https://github.com/Agame7k/freezy-sim/actions/workflows/test.yml/badge.svg"></a>
+  <a href="https://github.com/Agame7k/freezy-sim/actions/workflows/dependabot/update-graph"><img alt="Dependency Graph" src="https://github.com/Agame7k/freezy-sim/actions/workflows/dependabot/update-graph/badge.svg"></a>
   <a href="https://github.com/Agame7k/freezy-sim/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/Agame7k/freezy-sim?include_prereleases&label=release"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <img alt="Go 1.27+" src="https://img.shields.io/badge/go-1.27%2B-00ADD8?logo=go&logoColor=white">

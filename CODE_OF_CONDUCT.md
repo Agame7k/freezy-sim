@@ -21,4 +21,3 @@ If someone's behavior concerns you, contact the maintainer privately, through th
 comments, lock threads, or block people who break this code, as the Contributor Covenant's enforcement guidelines
 describe.
 
-Many contributors are minors. Behavior towards them that would not be acceptable at an FRC event is not acceptable here.
