@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-label="Freezy Sim: a simulated 2026 FRC field for testing your FMS">
+  <!-- GitHub's social preview (Settings → Social preview), 1280×640: the banner's field and text with the app icon. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0e13"/>
+      <stop offset="1" stop-color="#161c26"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff6b6e"/>
+      <stop offset="1" stop-color="#d63a3e"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5aa0ff"/>
+      <stop offset="1" stop-color="#2f74e0"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+    <g id="arm">
+      <line x1="0" y1="0" x2="0" y2="-150"/>
+      <polyline points="-40,-138 0,-98 40,-138"/>
+      <polyline points="-30,-78 0,-50 30,-78"/>
+    </g>
+    <g id="flake">
+      <use href="#arm"/>
+      <use href="#arm" transform="rotate(60)"/>
+      <use href="#arm" transform="rotate(120)"/>
+      <use href="#arm" transform="rotate(180)"/>
+      <use href="#arm" transform="rotate(240)"/>
+      <use href="#arm" transform="rotate(300)"/>
+    </g>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect width="1280" height="640" fill="url(#grid)"/>
+
+  <!-- The app icon (docs/images/icon.svg) -->
+  <svg x="80" y="88" width="150" height="150" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="112" fill="#0b0e13"/>
+    <rect x="4" y="4" width="504" height="504" rx="108" fill="none" stroke="#2c3646" stroke-width="8"/>
+    <path d="M112 60h144v392H112a52 52 0 0 1-52-52V112a52 52 0 0 1 52-52z" fill="url(#red)"/>
+    <path d="M256 60h144a52 52 0 0 1 52 52v288a52 52 0 0 1-52 52H256z" fill="url(#blue)"/>
+    <g transform="translate(256 256)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <use href="#flake" stroke="#0b0e13" stroke-width="44"/>
+      <use href="#flake" stroke="#ffffff" stroke-width="22"/>
+      <circle r="22" fill="#ffffff"/>
+    </g>
+  </svg>
+
+  <!-- A field seen from above (as in banner.svg), scaled up -->
+  <g transform="translate(694 186) scale(1.45)">
+    <rect x="0" y="0" width="360" height="184" rx="10" fill="#1d2430" stroke="#2c3646" stroke-width="2"/>
+    <rect x="58" y="10" width="26" height="164" fill="url(#blue)" opacity="0.55"/>
+    <rect x="276" y="10" width="26" height="164" fill="url(#red)" opacity="0.55"/>
+    <line x1="180" y1="10" x2="180" y2="174" stroke="#e7ecf2" stroke-opacity="0.7" stroke-width="3"/>
+    <polygon points="71,76 85,84 85,100 71,108 57,100 57,84" fill="#0b0e13" stroke="#5aa0ff" stroke-width="3"/>
+    <polygon points="289,76 303,84 303,100 289,108 275,100 275,84" fill="#0b0e13" stroke="#ff6b6e" stroke-width="3"/>
+    <g fill="#f3d36b">
+      <circle cx="130" cy="40" r="5"/><circle cx="146" cy="58" r="5"/><circle cx="118" cy="122" r="5"/>
+      <circle cx="210" cy="132" r="5"/><circle cx="232" cy="48" r="5"/><circle cx="248" cy="150" r="5"/>
+      <circle cx="160" cy="150" r="5"/><circle cx="200" cy="70" r="5"/><circle cx="104" cy="88" r="5"/>
+      <circle cx="262" cy="104" r="5"/><circle cx="222" cy="98" r="5"/><circle cx="140" cy="100" r="5"/>
+    </g>
+    <rect x="106" y="54" width="30" height="30" rx="4" fill="#2f74e0" stroke="#9cc3ff" stroke-width="2" transform="rotate(-14 121 69)"/>
+    <rect x="150" y="118" width="30" height="30" rx="4" fill="#2f74e0" stroke="#9cc3ff" stroke-width="2" transform="rotate(10 165 133)"/>
+    <rect x="224" y="60" width="30" height="30" rx="4" fill="#d63a3e" stroke="#ffb1b3" stroke-width="2" transform="rotate(18 239 75)"/>
+    <rect x="196" y="112" width="30" height="30" rx="4" fill="#d63a3e" stroke="#ffb1b3" stroke-width="2" transform="rotate(-8 211 127)"/>
+  </g>
+
+  <g font-family="Segoe UI, Helvetica Neue, Arial, sans-serif">
+    <text x="76" y="342" font-size="92" font-weight="700" fill="#e7ecf2">Freezy Sim</text>
+    <text x="80" y="398" font-size="32" fill="#8a96a8">A simulated 2026 FRC field</text>
+    <text x="80" y="440" font-size="32" fill="#8a96a8">for testing your FMS</text>
+    <text x="80" y="506" font-size="22" fill="#5b6678">Driver stations · PLC · LEDs · field network</text>
+    <text x="80" y="538" font-size="22" fill="#5b6678">AI robots · acceptance tests</text>
+    <text x="1200" y="580" font-size="22" fill="#5b6678" text-anchor="end">github.com/Agame7k/freezy-sim</text>
+  </g>
+</svg>
