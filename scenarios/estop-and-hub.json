@@ -1,0 +1,32 @@
+[
+  {
+    "id": "estop-json",
+    "name": "Team E-stop latches for the match",
+    "description": "JSON port: B2's E-stop disables it at once and it stays disabled after the button is released; B1 is unaffected.",
+    "steps": [
+      { "do": "startMatch" },
+      { "at": "teleop+1", "do": "press", "control": "teamEStop", "index": 4 },
+      { "expect": "!ds.B2.enabled", "within": 1, "fatal": true },
+      { "do": "release", "control": "teamEStop", "index": 4 },
+      { "at": "+2", "expect": "!ds.B2.enabled" },
+      { "expect": "arena.station.B2.estop" },
+      { "expect": "ds.B1.enabled" },
+      { "do": "abort" }
+    ]
+  },
+  {
+    "id": "fieldestop-json",
+    "name": "Field E-stop aborts the match and stops the hubs",
+    "description": "JSON port: the scoring-table field E-stop ends the match, the hub motors stop and every robot disables within a control period.",
+    "steps": [
+      { "do": "startMatch" },
+      { "at": "auto+5", "do": "press", "control": "fieldEStop", "index": 0 },
+      { "expect": "arena.state == PostMatch", "within": 2, "fatal": true },
+      { "expect": "!coil.redHubMotor", "within": 2 },
+      { "expect": "!coil.blueHubMotor", "within": 2 },
+      { "expect": "!ds.R1.enabled", "within": 0.65 },
+      { "expect": "!ds.B3.enabled", "within": 0.65 },
+      { "do": "release", "control": "fieldEStop", "index": 0 }
+    ]
+  }
+]

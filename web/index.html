@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Freezy Sim</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/vendor/three/three.module.js",
+        "three/addons/": "/vendor/three/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <header id="matchbar"></header>
+    <main id="workspace">
+      <section id="viewport">
+        <div id="scene-host"></div>
+        <div id="css3d-host"></div>
+        <div id="hud"></div>
+      </section>
+      <div id="dock-resizer" title="Drag to resize"></div>
+      <aside id="dock"></aside>
+    </main>
+    <footer id="ticker"></footer>
+  </div>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

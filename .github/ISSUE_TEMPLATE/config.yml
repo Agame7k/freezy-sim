@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/Agame7k/freezy-sim/tree/main/docs
+    about: Setup, configuration, testing and troubleshooting guides.
+  - name: An arena bug (Freezy Arena)
+    url: https://github.com/Freezy-Arena/freezy-arena/issues
+    about: The arena did something wrong, and the sim reported it correctly.
+  - name: An arena bug (Cheesy Arena)
+    url: https://github.com/Team254/cheesy-arena/issues
+    about: The same, for upstream Cheesy Arena.

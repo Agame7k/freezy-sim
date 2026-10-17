@@ -1,0 +1,65 @@
+/* Look-alike of the FRC Driver Station operation tab, driven by the simulator's DS state. */
+:root { color-scheme: dark; }
+html, body { margin: 0; height: 100%; background: #1f1f1f; color: #e6e6e6; font: 12px/1.3 "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+.ds { display: grid; grid-template-columns: 34px 210px 1fr 300px; height: 100vh; min-height: 220px; border-top: 3px solid var(--alliance, #3d8bff); }
+.ds.red { --alliance: #e5484d; }
+.ds.blue { --alliance: #3d8bff; }
+
+.ds-rail { background: #2a2a2a; border-right: 1px solid #111; display: flex; flex-direction: column; align-items: center; padding-top: 6px; gap: 4px; }
+.ds-rail span { width: 24px; height: 24px; border-radius: 3px; display: grid; place-items: center; color: #9a9a9a; font-size: 13px; }
+.ds-rail span.active { background: #3b3b3b; color: #fff; box-shadow: inset 2px 0 0 #f5b301; }
+
+.ds-modes { background: #262626; border-right: 1px solid #111; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.ds-mode { padding: 6px 8px; background: #303030; border: 1px solid #1b1b1b; border-radius: 2px; color: #888; }
+.ds-mode.sel { background: #3d4c5c; color: #fff; border-color: #5f7d99; }
+.ds-en { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: auto; }
+.ds-en div { text-align: center; font-weight: 700; padding: 12px 0; font-size: 14px; border-radius: 2px; opacity: .35; }
+.ds-en .enable { background: #2c7a3e; }
+.ds-en .disable { background: #8a2b2b; }
+.ds-en .lit { opacity: 1; box-shadow: 0 0 10px #0008 inset; }
+.ds-fms-note { font-size: 10px; color: #aaa; text-align: center; }
+
+.ds-center { display: grid; grid-template-columns: 170px 1fr; gap: 10px; padding: 10px 12px; background: #222; }
+.ds-team { font-size: 12px; color: #aaa; }
+.ds-team b { display: block; font-size: 34px; color: #fff; line-height: 1.05; letter-spacing: .02em; }
+.ds-batt { margin-top: 8px; }
+.ds-batt b { font-size: 24px; font-family: Consolas, monospace; }
+.ds-batt canvas { width: 100%; height: 44px; display: block; background: #161616; border: 1px solid #333; margin-top: 4px; }
+.ds-ind { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.ds-ind div { display: flex; align-items: center; gap: 8px; }
+.ds-ind i { width: 40px; height: 14px; border-radius: 2px; background: #b52a2a; box-shadow: inset 0 0 0 1px #0006; }
+.ds-ind i.ok { background: #2fb35a; }
+.ds-status { display: flex; flex-direction: column; justify-content: center; }
+.ds-status .big { font-size: 26px; font-weight: 600; color: #fff; line-height: 1.15; }
+.ds-status .big.bad { color: #ff6b6b; }
+.ds-status .big.good { color: #6ee08f; }
+.ds-row { display: flex; gap: 14px; margin-top: 10px; color: #bbb; flex-wrap: wrap; }
+.ds-row b { color: #fff; font-family: Consolas, monospace; }
+.ds-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #333; color: #ccc; font-weight: 600; }
+.ds-pill.ok { background: #1f5a33; color: #b9f5cb; }
+.ds-pill.bad { background: #5a1f1f; color: #ffc1c1; }
+.ds-pill.warn { background: #5a4a1f; color: #ffe2a6; }
+.ds-station { font-size: 16px; font-weight: 700; color: var(--alliance); }
+.ds-gamedata { font-family: Consolas, monospace; font-size: 18px; color: #fff; background: #333; padding: 0 8px; border-radius: 2px; }
+
+.ds-msgs { background: #191919; border-left: 1px solid #111; display: flex; flex-direction: column; min-height: 0; }
+.ds-msgs .hdr { padding: 5px 8px; background: #2a2a2a; color: #aaa; font-size: 11px; border-bottom: 1px solid #111; }
+.ds-msgs .body { flex: 1; overflow: auto; padding: 4px 8px; font-family: Consolas, monospace; font-size: 11px; }
+.ds-msgs .bad { color: #ff8080; }
+.ds-msgs .good { color: #87e5a3; }
+.ds-msgs .warn { color: #ffd27a; }
+.ds-msgs .t { color: #777; margin-right: 6px; }
+
+/* Left column extras: Elapsed Time, PC Battery / CPU bars, Team Station. */
+.ds-kv { display: flex; flex-direction: column; gap: 2px; color: #aaa; font-size: 11px; }
+.ds-kv b { color: #fff; font-size: 13px; }
+.ds-elapsed { font-family: Consolas, monospace; font-size: 18px !important; }
+.ds-bar { height: 9px; background: #161616; border: 1px solid #333; border-radius: 2px; overflow: hidden; }
+.ds-bar-fill { height: 100%; width: 0; background: #2fb35a; transition: width .3s; }
+
+/* Messages / Diagnostics tabs. */
+.ds-tabs { display: flex; gap: 2px; padding: 0 !important; }
+.ds-tabs span { padding: 5px 10px; cursor: pointer; }
+.ds-tabs span.active { background: #191919; color: #fff; box-shadow: inset 0 2px 0 #f5b301; }
+.ds-diag-row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid #262626; }
+.ds-diag-row span { color: #999; }

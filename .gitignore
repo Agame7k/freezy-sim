@@ -1,0 +1,32 @@
+# Build output
+/freezy-sim.exe
+/*.exe
+/bin/
+/dist/
+
+# Arena sandbox, recordings, reports, logs, saved AI state, imported field model
+/run/
+
+# Local machine config (copy config.example.json to freezy-sim.json)
+/freezy-sim.json
+
+# The official field CAD mesh is never shipped: everyone generates their own from FIRST's STEP file
+# (docs/FIELD_MODEL.md). The app keeps it in run/models/; this catches a copy left in the web folder.
+/web/models/field-cad.glb
+*.FCStd
+*.step
+*.stp
+
+# WebView2 browser profile (cache, cookies). The app keeps its own under %LOCALAPPDATA%\freezy-sim; a folder here
+# comes from an old build or another WebView2 program started in this folder.
+/EBWebView/
+
+# Local tool settings
+/.claude/settings.local.json
+/.vscode/
+/.idea/
+
+# OS clutter
+Thumbs.db
+Desktop.ini
+.DS_Store

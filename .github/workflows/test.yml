@@ -1,0 +1,44 @@
+# Unit tests, formatting and vet on every push and pull request. (The acceptance suite needs an arena and real time,
+# so it isn't run here: see docs/TESTING.md for running it in an arena repository's CI.)
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Check formatting
+        shell: bash
+        run: |
+          unformatted="$(gofmt -l internal cmd web)"
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build
+        run: go build -o freezy-sim.exe ./cmd/freezy-sim
+
+      - name: Headless modes still compile on Linux
+        shell: bash
+        run: GOOS=linux go build ./...
