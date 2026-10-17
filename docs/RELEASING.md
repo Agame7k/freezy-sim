@@ -1,0 +1,103 @@
+# Releasing
+
+A checklist for publishing a version. The version number goes into the exe at build time (`release.cmd <version>`);
+the source default in `internal/version/version.go` is the next version with `-dev` after it.
+
+## 1. Before you build
+
+- [ ] `CHANGELOG.md`: the version's heading has today's date instead of "not yet released" (or, for later versions,
+  the "Unreleased" notes have moved under a new version heading).
+- [ ] Docs: check that the README and `docs/` match what the release does (new flags, config keys, tests).
+- [ ] `git status` shows only what you mean to publish. These must **never** be committed, and `.gitignore` covers them:
+  - `freezy-sim.json` (local paths, maybe passwords)
+  - `run/` (the sandbox arena, logs, reports, recordings and the imported field model)
+  - `EBWebView/` (a browser profile with cache and cookies)
+  - `.claude/settings.local.json`
+  - `*.exe`, `dist/`
+  - `field-cad.glb`, `*.step` and `*.FCStd` (FIRST's CAD; see the licensing checks below)
+- [ ] Check what git would add, and how big it is:
+
+  ```bash
+  git status --short
+  ```
+
+  ```bash
+  git ls-files --others --exclude-standard
+  ```
+
+  For 0.1.0 that was about 270 files and 16 MB. The largest are the two GIFs in `docs/images/` (about 4 MB each),
+  `web/models/human.fbx` (2.4 MB) and three.js.
+
+## 2. Licensing checks
+
+- [ ] No FIRST CAD in the tree. This should print nothing:
+
+  ```bash
+  git ls-files "*.glb" "*.step" "*.stp" "*.FCStd"
+  ```
+
+- [ ] `THIRD_PARTY_NOTICES.md` lists every module in the build. Compare it with:
+
+  ```bash
+  go version -m dist/freezy-sim-v0.1.0-windows-amd64/freezy-sim.exe
+  ```
+
+  A new dependency needs its license text added. Test-only dependencies don't ship in the exe.
+- [ ] If three.js or the people model changed, update their rows and license texts.
+
+## 3. Test
+
+- [ ] `gofmt -l internal cmd web` prints nothing; `go vet ./...` and `go test ./...` pass. `release.cmd` checks these
+  too.
+- [ ] The acceptance suite passes against the current Freezy Arena, with both field profiles:
+
+  ```bash
+  freezy-sim.exe -suite acceptance
+  ```
+
+  Then set `"field": { "profile": "plc" }` and run it again.
+- [ ] A short soak is clean: `freezy-sim.exe -soak 3 -soak-chaos 3`.
+- [ ] If physics or AI changed: `freezy-sim.exe -suite ai -bench-matches 40 -bench-seed 21`, compared with the baseline.
+- [ ] If possible, the suite against upstream Cheesy Arena (`plc` profile). Note the result in the release notes.
+
+## 4. Build
+
+```bash
+release.cmd 0.1.0
+```
+
+This checks formatting, vet and tests, then builds a trimmed, stamped exe. It writes
+`dist/freezy-sim-v0.1.0-windows-amd64.zip` and a `.sha256` file beside it. The zip holds one folder,
+`freezy-sim-v0.1.0-windows-amd64/`, containing:
+
+- `freezy-sim.exe`
+- `README.md`, `LICENSE.txt`, `THIRD_PARTY_NOTICES.md`, `CHANGELOG.md`
+- `config.example.json`, `scenarios/`, `docs/`
+- `tools/cad/export_field.py`
+
+## 5. Smoke-test the zip
+
+- [ ] Unzip it into a new, empty folder outside the repository.
+- [ ] `freezy-sim.exe -version` prints the right version.
+- [ ] Run it with no config: the log says to create `freezy-sim.json`.
+- [ ] Add a config pointing at an arena, run it, and play one test match.
+- [ ] ⚙ → Field model shows "The official CAD isn't included…", and importing a `.glb` works.
+
+## 6. Publish
+
+These steps are yours. Nothing in the repo does them automatically.
+
+1. Commit, then tag the release: `git tag v0.1.0`.
+2. Push the branch and the tag.
+3. On GitHub, draft a release from the tag. Title it `v0.1.0`, paste that version's changelog section, and attach the
+   zip and the `.sha256` file.
+4. First release only, in the repository settings:
+   - Description: "A simulated 2026 FRC field for testing Freezy Arena / Cheesy Arena without field hardware"
+   - Topics: `frc`, `first-robotics`, `fms`, `cheesy-arena`, `simulator`, `testing`
+   - Turn on Issues, and **Private vulnerability reporting** (Security → Advisories), which SECURITY.md points to
+   - Check that the "Tests" workflow ran on the push and passed
+
+## 7. After
+
+- [ ] Set `internal/version/version.go` to the next version with `-dev`, for example `0.2.0-dev`.
+- [ ] Add a new empty "Unreleased" section to `CHANGELOG.md`.

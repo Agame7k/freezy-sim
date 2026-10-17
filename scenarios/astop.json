@@ -1,0 +1,16 @@
+{
+  "id": "astop-json",
+  "name": "A-stop disables only during auto",
+  "description": "JSON port of the built-in A-stop test: R1's A-stop disables just R1 for the rest of auto (even after release); R1 re-enables in teleop.",
+  "steps": [
+    { "do": "startMatch" },
+    { "at": "auto+3", "do": "press", "control": "teamAStop", "index": 0 },
+    { "expect": "ds.R1.enabled == false", "within": 1, "fatal": true },
+    { "expect": "ds.R2.enabled" },
+    { "expect": "ds.B1.enabled" },
+    { "do": "release", "control": "teamAStop", "index": 0 },
+    { "expect": "!ds.R1.enabled", "hold": 1.5 },
+    { "at": "teleop+0.3", "expect": "ds.R1.enabled", "within": 1.5 },
+    { "do": "abort" }
+  ]
+}

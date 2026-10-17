@@ -1,0 +1,63 @@
+name: Bug report
+description: Something in Freezy Sim doesn't work, or does the wrong thing
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! If the **arena** did something wrong (and the sim reported it correctly), please report it
+        to [Freezy Arena](https://github.com/Freezy-Arena/freezy-arena/issues) or
+        [Cheesy Arena](https://github.com/Team254/cheesy-arena/issues) instead. **Security problems:** please use the
+        Security tab, not an issue.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce it
+      description: Steps, the command line you used, or the test id that failed.
+      placeholder: |
+        1. freezy-sim.exe -suite acceptance -tests grace
+        2. ...
+  - type: textarea
+    id: bundle
+    attributes:
+      label: Bug-report bundle
+      description: >
+        Drag the bundle zip here. Save one with the 🐞 button, or use the run/reports/bundle-*.zip a failed run left.
+        Passwords and tokens are removed, but it contains the sandbox arena's database: look inside first if that data
+        is private.
+  - type: input
+    id: version
+    attributes:
+      label: Freezy Sim version
+      description: The output of `freezy-sim.exe -version`.
+      placeholder: Freezy Sim 0.1.0 (commit 1a2b3c4), go1.27.1 windows/amd64
+    validations:
+      required: true
+  - type: input
+    id: arena
+    attributes:
+      label: Arena and version
+      description: Freezy Arena, Cheesy Arena or another fork, and its commit or tag.
+      placeholder: Freezy Arena 49d5cea
+    validations:
+      required: true
+  - type: dropdown
+    id: profile
+    attributes:
+      label: Field profile (field.profile)
+      options:
+        - altio (default)
+        - plc
+        - minimal
+  - type: input
+    id: os
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2

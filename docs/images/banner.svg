@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="300" viewBox="0 0 1280 300" role="img" aria-label="Freezy Sim: a simulated FRC field for testing an FMS">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0e13"/>
+      <stop offset="1" stop-color="#161c26"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff6b6e"/>
+      <stop offset="1" stop-color="#d63a3e"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5aa0ff"/>
+      <stop offset="1" stop-color="#2f74e0"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.035" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1280" height="300" rx="18" fill="url(#bg)"/>
+  <rect width="1280" height="300" rx="18" fill="url(#grid)"/>
+
+  <!-- A field seen from above: red and blue alliance halves, hubs, the center line -->
+  <g transform="translate(860 58)">
+    <rect x="0" y="0" width="360" height="184" rx="10" fill="#1d2430" stroke="#2c3646" stroke-width="2"/>
+    <rect x="58" y="10" width="26" height="164" fill="url(#blue)" opacity="0.55"/>
+    <rect x="276" y="10" width="26" height="164" fill="url(#red)" opacity="0.55"/>
+    <line x1="180" y1="10" x2="180" y2="174" stroke="#e7ecf2" stroke-opacity="0.7" stroke-width="3"/>
+    <polygon points="71,76 85,84 85,100 71,108 57,100 57,84" fill="#0b0e13" stroke="#5aa0ff" stroke-width="3"/>
+    <polygon points="289,76 303,84 303,100 289,108 275,100 275,84" fill="#0b0e13" stroke="#ff6b6e" stroke-width="3"/>
+    <g fill="#f3d36b">
+      <circle cx="130" cy="40" r="5"/><circle cx="146" cy="58" r="5"/><circle cx="118" cy="122" r="5"/>
+      <circle cx="210" cy="132" r="5"/><circle cx="232" cy="48" r="5"/><circle cx="248" cy="150" r="5"/>
+      <circle cx="160" cy="150" r="5"/><circle cx="200" cy="70" r="5"/><circle cx="104" cy="88" r="5"/>
+      <circle cx="262" cy="104" r="5"/><circle cx="222" cy="98" r="5"/><circle cx="140" cy="100" r="5"/>
+    </g>
+    <rect x="106" y="54" width="30" height="30" rx="4" fill="#2f74e0" stroke="#9cc3ff" stroke-width="2" transform="rotate(-14 121 69)"/>
+    <rect x="150" y="118" width="30" height="30" rx="4" fill="#2f74e0" stroke="#9cc3ff" stroke-width="2" transform="rotate(10 165 133)"/>
+    <rect x="224" y="60" width="30" height="30" rx="4" fill="#d63a3e" stroke="#ffb1b3" stroke-width="2" transform="rotate(18 239 75)"/>
+    <rect x="196" y="112" width="30" height="30" rx="4" fill="#d63a3e" stroke="#ffb1b3" stroke-width="2" transform="rotate(-8 211 127)"/>
+  </g>
+
+  <!-- Logo mark: the app icon, half red and half blue -->
+  <g transform="translate(72 92)">
+    <rect width="116" height="116" rx="26" fill="#0b0e13" stroke="#2c3646" stroke-width="2"/>
+    <path d="M26 14h32v88H26a12 12 0 0 1-12-12V26a12 12 0 0 1 12-12z" fill="url(#red)"/>
+    <path d="M58 14h32a12 12 0 0 1 12 12v64a12 12 0 0 1-12 12H58z" fill="url(#blue)"/>
+  </g>
+
+  <text x="220" y="148" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="68" font-weight="700" fill="#e7ecf2">Freezy Sim</text>
+  <text x="222" y="192" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="25" fill="#8a96a8">A simulated 2026 FRC field for testing your FMS</text>
+  <text x="222" y="226" font-family="Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="19" fill="#5b6678">Driver stations · PLC · LEDs · field network · AI robots · acceptance tests</text>
+</svg>

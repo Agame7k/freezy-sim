@@ -1,0 +1,21 @@
+name: Feature request
+description: An idea for something the sim should simulate, test or show
+labels: [enhancement]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: The test, the event situation or the view you need. There may already be a way to do it.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: How you picture it working.
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Links to the game manual, the arena's code, or screenshots.

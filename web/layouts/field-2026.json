@@ -1,0 +1,115 @@
+{
+  "name": "2026 FRC REBUILT",
+  "units": "meters, WPILib field frame: origin at the blue-alliance-wall corner, +x toward red, +y across, +z up",
+  "sources": [
+    "FIRST FE-2026 REBUILT Playing Field drawings (run/refs/first-2026), rev B, sheet 11 AprilTag table",
+    "2026 Game Manual section 5 (Arena) and section 6 (Game Details)",
+    "WPILib 2026-rebuilt-welded.json AprilTag layout"
+  ],
+  "notes": [
+    "Hub, trench, tower and outpost positions come from AprilTag poses; sizes from the manual.",
+    "Driver station order (outpost, DS3, tower, DS2, DS1) is derived from tower/outpost tag spacing; verify against the Field Dimension Drawings.",
+    "Depot position along the wall is not in the public text and is an estimate.",
+    "FE-2026 sheet 11 (AprilTag coordinates): tower centred between tags 31/32 at Y 155.97 in = 3.962 m (blue), 4.107 m (red); was 4.178 (one tag's position).",
+    "FE-2026 sheet 11: outpost tags 29/30 at Y 26.22/43.22 in; the chute and floor openings are centred between them (Y 0.882 m, see outpost.openingY).",
+    "venue.scoringTableSide picks which long side the scoring table sits on (the arena's LED test modes name hub faces 'Facing Scoring Table' / 'Facing Audience', so they are opposite)."
+  ],
+  "field": { "length": 16.541, "width": 8.069 },
+  "venue": { "scoringTableSide": "high" },
+  "carpet": { "color": "#4a4f57" },
+  "guardrail": { "height": 0.508, "gates": [[2.5, "low"], [14.04, "low"], [2.5, "high"], [14.04, "high"]], "gateWidth": 0.965 },
+  "zones": {
+    "allianceZoneDepth": 4.028,
+    "neutralZoneDepth": 7.19,
+    "humanStartingLineFromWall": 0.61,
+    "tapeWidth": 0.051
+  },
+  "hub": {
+    "size": 1.194,
+    "bodyHeight": 1.264,
+    "roofHeight": 1.47,
+    "openingHeight": 1.83,
+    "openingDiameter": 1.06,
+    "throatDiameter": 0.61,
+    "tagHeight": 1.124,
+    "positions": { "blue": [4.625, 4.035], "red": [11.916, 4.035] },
+    "exitCount": 4,
+    "exit": { "bottom": 0.765, "top": 0.98, "lanes": [-0.42, -0.14, 0.14, 0.42], "deflectorDepth": 0.145, "speed": [0.7, 1.5] },
+    "net": { "bottom": 1.264, "meshBottom": 1.65, "top": 3.057, "width": 1.484, "overhang": 0.261 }
+  },
+  "bump": { "width": 1.854, "depth": 1.128, "height": 0.165, "rampDegrees": 15 },
+  "trench": { "width": 1.668, "depth": 1.194, "thickness": 0.075, "openingCenterY": 0.6445, "height": 1.022, "clearWidth": 1.279, "clearHeight": 0.565, "tagHeight": 0.889 },
+  "tower": {
+    "width": 1.251, "depth": 1.143, "height": 1.988,
+    "baseWidth": 0.991, "baseDepth": 1.148,
+    "uprightHeight": 1.831, "uprightSpacing": 0.819, "uprightThickness": 0.038, "uprightDepth": 0.089,
+    "uprightSetback": 0.95,
+    "rungDiameter": 0.042, "rungOverhang": 0.149,
+    "rungs": { "low": 0.686, "mid": 1.143, "high": 1.600 },
+    "centerY": { "blue": 3.962, "red": 4.107 }
+  },
+  "outpost": {
+    "width": 1.8,
+    "chuteOpening": { "width": 0.808, "height": 0.178, "bottom": 0.714 },
+    "floorOpening": { "width": 0.813, "height": 0.178, "bottom": 0.048 },
+    "corral": { "width": 0.908, "depth": 0.955, "wallHeight": 0.206 },
+    "chuteCapacity": 24,
+    "openingY": 0.882,
+    "range": { "blue": [0.0, 1.8], "red": [6.269, 8.069] }
+  },
+  "depot": { "width": 1.067, "depth": 0.686, "barrierHeight": 0.025, "barrierWidth": 0.076, "centerY": { "blue": 6.437, "red": 1.632 }, "count": 24 },
+  "driverStation": {
+    "baseHeight": 0.935,
+    "glassHeight": 1.07,
+    "shelfWidth": 1.75,
+    "shelfDepth": 0.311,
+    "shelfHeight": 0.935,
+    "signHeight": 0.32,
+    "centers": {
+      "B1": 7.253, "B2": 5.620, "B3": 2.676,
+      "R1": 0.816, "R2": 2.449, "R3": 5.393
+    }
+  },
+  "fuel": {
+    "diameter": 0.150,
+    "mass": 0.215,
+    "total": 504,
+    "preloadPerRobot": 8,
+    "neutralBox": { "centerX": 8.2705, "centerY": 4.0345, "lengthX": 1.829, "widthY": 5.232 }
+  },
+  "aprilTagSize": 0.2064,
+  "aprilTags": [
+    { "id": 1, "x": 11.8779798, "y": 7.4247756, "z": 0.889, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 2, "x": 11.9154194, "y": 4.63804, "z": 1.12395, "q": [0.7071067811865476, 0.0, 0.0, 0.7071067811865476] },
+    { "id": 3, "x": 11.3118646, "y": 4.3902376, "z": 1.12395, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 4, "x": 11.3118646, "y": 4.0346376, "z": 1.12395, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 5, "x": 11.9154194, "y": 3.4312352, "z": 1.12395, "q": [-0.7071067811865475, 0.0, 0.0, 0.7071067811865476] },
+    { "id": 6, "x": 11.8779798, "y": 0.6444996, "z": 0.889, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 7, "x": 11.9528844, "y": 0.6444996, "z": 0.889, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 8, "x": 12.2710194, "y": 3.4312352, "z": 1.12395, "q": [-0.7071067811865475, 0.0, 0.0, 0.7071067811865476] },
+    { "id": 9, "x": 12.5191774, "y": 3.6790376, "z": 1.12395, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 10, "x": 12.5191774, "y": 4.0346376, "z": 1.12395, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 11, "x": 12.2710194, "y": 4.63804, "z": 1.12395, "q": [0.7071067811865476, 0.0, 0.0, 0.7071067811865476] },
+    { "id": 12, "x": 11.9528844, "y": 7.4247756, "z": 0.889, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 13, "x": 16.5333172, "y": 7.4033126, "z": 0.55245, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 14, "x": 16.5333172, "y": 6.9715126, "z": 0.55245, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 15, "x": 16.5329616, "y": 4.3235626, "z": 0.55245, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 16, "x": 16.5329616, "y": 3.8917626, "z": 0.55245, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 17, "x": 4.6630844, "y": 0.6444996, "z": 0.889, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 18, "x": 4.6256194, "y": 3.4312352, "z": 1.12395, "q": [-0.7071067811865475, 0.0, 0.0, 0.7071067811865476] },
+    { "id": 19, "x": 5.2291742, "y": 3.6790376, "z": 1.12395, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 20, "x": 5.2291742, "y": 4.0346376, "z": 1.12395, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 21, "x": 4.6256194, "y": 4.63804, "z": 1.12395, "q": [0.7071067811865476, 0.0, 0.0, 0.7071067811865476] },
+    { "id": 22, "x": 4.6630844, "y": 7.4247756, "z": 0.889, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 23, "x": 4.5881798, "y": 7.4247756, "z": 0.889, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 24, "x": 4.2700194, "y": 4.63804, "z": 1.12395, "q": [0.7071067811865476, 0.0, 0.0, 0.7071067811865476] },
+    { "id": 25, "x": 4.0218614, "y": 4.3902376, "z": 1.12395, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 26, "x": 4.0218614, "y": 4.0346376, "z": 1.12395, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 27, "x": 4.2700194, "y": 3.4312352, "z": 1.12395, "q": [-0.7071067811865475, 0.0, 0.0, 0.7071067811865476] },
+    { "id": 28, "x": 4.5881798, "y": 0.6444996, "z": 0.889, "q": [0.0, 0.0, 0.0, 1.0] },
+    { "id": 29, "x": 0.007747, "y": 0.6659626, "z": 0.55245, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 30, "x": 0.007747, "y": 1.0977626, "z": 0.55245, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 31, "x": 0.0080772, "y": 3.7457126, "z": 0.55245, "q": [1.0, 0.0, 0.0, 0.0] },
+    { "id": 32, "x": 0.0080772, "y": 4.1775126, "z": 0.55245, "q": [1.0, 0.0, 0.0, 0.0] }
+  ]
+}

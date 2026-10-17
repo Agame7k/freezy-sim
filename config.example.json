@@ -1,0 +1,14 @@
+{
+  "gui": { "bind": "127.0.0.1", "port": 8090, "width": 1600, "height": 940, "remote": "" },
+  "arena": {
+    "mode": "sandbox",
+    "sourceDir": "C:/path/to/freezy-arena",
+    "sandboxDir": "run/arena",
+    "host": "127.0.0.1",
+    "httpPort": 8080,
+    "adminPassword": "",
+    "autoStart": true,
+    "preferBuild": true
+  },
+  "field": { "profile": "altio", "variant": "welded" }
+}
