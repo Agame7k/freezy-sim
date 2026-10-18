@@ -6,6 +6,8 @@ the scenario format or the recording format.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-18
+
 ### Added
 - First-run setup without editing JSON. The sim looks for the arena folder next to itself and in the usual places
   (home, Documents, Desktop, Downloads, `source`, `code`, GitHub, OneDrive) and uses it if it finds exactly one.
