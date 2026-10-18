@@ -3,6 +3,7 @@
 import { h, replace, led, tag, toast, cmdButton } from "../core/dom.js";
 import { on, cmd } from "../core/store.js";
 import { registerPanel } from "../ui/dock.js";
+import { icon } from "../core/icons.js";
 
 const ARCHETYPES = [
   ["scorer", "Low shooter (trench)"], ["tall", "Tall shooter"], ["turret", "Turret shooter"], ["volley", "Wide volley shooter (4 lanes)"],
@@ -39,7 +40,7 @@ registerPanel({
         h("h3", "Field", h("span.grow"), w.paused ? tag("PAUSED", "warn") : tag(`t=${w.time.toFixed(0)}s`)),
         h("div.btn-row",
           cmdButton("Field reset (restage FUEL, new game plans)", "world.reset", {}, "primary"),
-          h("button.btn", { onclick: () => run("world.pause", { paused: !w.paused }) }, w.paused ? "▶ Resume physics" : "⏸ Pause physics"),
+          h("button.btn", { onclick: () => run("world.pause", { paused: !w.paused }) }, icon(w.paused ? "play" : "pause"), w.paused ? "Resume physics" : "Pause physics"),
         ),
         h("dl.kv",
           h("dt", "FUEL"), h("dd", Object.entries(w.fuel).map(([k, v]) => `${k} ${v}`).join(" · ")),
@@ -96,13 +97,13 @@ registerPanel({
               h("td.small", { style: { color: "var(--amber)" } }, (r.faults || []).join(", ")),
               h("td.row",
                 h("button.btn.sm", { class: r.manual ? "on" : "", title: "Drive this robot with keyboard/gamepad",
-                  onclick: () => window.venue?.drive?.start(r.station) }, "🎮"),
+                  "aria-label": "Drive", onclick: () => window.venue?.drive?.start(r.station) }, icon("gamepad")),
                 r.manual ? h("button.btn.sm", { title: "Hand back to the AI driver",
                   onclick: () => run("world.robot", { station: r.station, manual: false }) }, "AI") : null,
-                h("button.btn.sm", { title: "Follow camera", onclick: () => {
+                h("button.btn.sm", { title: "Follow camera", "aria-label": "Follow camera", onclick: () => {
                   const robot = window.venue?.robots?.[r.station];
                   if (robot) window.venue.cameras.followRobot(robot.root, r.station);
-                } }, "🎥")),
+                } }, icon("video"))),
             ))),
           h("div.hint", { style: { marginTop: "6px" } },
             "AI drivers only use what a real robot knows: DS enable/auto, FMS match time and game data, and the hub lights."));

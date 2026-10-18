@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Agame7k/freezy-sim/internal/inspector"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 // Modbus function codes.
@@ -146,7 +147,10 @@ func (server *ModbusServer) accept(listener net.Listener) {
 		server.mu.Lock()
 		server.conns[conn] = conn.RemoteAddr().String()
 		server.mu.Unlock()
-		go server.serve(conn)
+		go func() {
+			defer safe.Recover(nil, "fieldio")
+			server.serve(conn)
+		}()
 	}
 }
 

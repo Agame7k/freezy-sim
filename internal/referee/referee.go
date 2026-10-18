@@ -130,7 +130,7 @@ func New(hub *bus.Hub, arenaClient *arena.Client, w *world.World, reportDir stri
 func (ref *Referee) Run() {
 	go ref.panels[0].Run()
 	go ref.panels[1].Run()
-	go ref.refPanel.Run()
+	safe.Go(ref.hub, "referee", ref.refPanel.Run)
 	safe.Go(ref.hub, "referee", ref.enterFouls)
 	safe.Go(ref.hub, "referee", ref.watchFouls)
 	ref.publish()
@@ -312,7 +312,7 @@ func (ref *Referee) finishMatch(enabled, aborted bool) {
 		hook(enabled, aborted)
 	}
 	if enabled && settings.FieldSignals {
-		go ref.fieldSignals()
+		safe.Async(ref.hub, "referee", ref.fieldSignals)
 	}
 	if enabled && settings.AutoPost {
 		time.Sleep(2 * time.Second)

@@ -2,6 +2,7 @@
 import { h, replace, led, tag, toast, cmdButton, STATIONS } from "../core/dom.js";
 import { on, cmd, get } from "../core/store.js";
 import { registerPanel } from "../ui/dock.js";
+import { icon } from "../core/icons.js";
 
 const run = (command, args) => cmd(command, args).catch((e) => toast(e.message, "error"));
 
@@ -20,7 +21,7 @@ function stackLight(coils) {
     lamp("#35c47c", coils.stackLightGreen, "Green: field ready / match running"),
     h("div", { style: { width: "6px", height: "26px", background: "#444" } }),
     h("div.small", { style: { color: coils.stackLightBuzzer ? "var(--amber)" : "var(--faint)" } },
-      coils.stackLightBuzzer ? "🔔 buzzer" : "buzzer"));
+      coils.stackLightBuzzer ? [icon("bell", 12), "buzzer"] : "buzzer"));
 }
 
 registerPanel({

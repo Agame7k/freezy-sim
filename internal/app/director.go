@@ -13,6 +13,7 @@ import (
 
 	"github.com/Agame7k/freezy-sim/internal/arena"
 	"github.com/Agame7k/freezy-sim/internal/bus"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 	"github.com/Agame7k/freezy-sim/internal/scouting"
 )
 
@@ -113,7 +114,8 @@ func (app *App) registerDirector() {
 		d.stop = false
 		d.lastStart = time.Time{}
 		d.options = request.directorOptions
-		go d.run(request.Type, request.Limit)
+		matchType, limit := request.Type, request.Limit
+		safe.Async(app.Hub, "director", func() { d.run(matchType, limit) })
 		return nil, nil
 	})
 	app.Hub.Handle("director.stop", func(_ []byte) (any, error) {

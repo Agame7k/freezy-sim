@@ -74,7 +74,7 @@ field center at the origin.
 
 In the sim:
 
-1. Click **⚙** at the top right of the 3D view.
+1. Click the graphics button at the top right of the 3D view (it shows the quality preset, such as **High**).
 2. Under **Field model**, click **Import .glb…** and pick `C:\fc\out\field-cad.glb`.
 3. It switches to **Official CAD** as soon as the import finishes.
 

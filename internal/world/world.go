@@ -361,7 +361,8 @@ func (world *World) stagingTargets() []ballTarget {
 
 // Run starts the fixed-rate simulation loop.
 func (world *World) Run() {
-	go func() {
+	// tick recovers its own panics; safe.Go restarts the loop if broadcasting or publishing ever panics.
+	safe.Go(world.bus, "world", func() {
 		period := time.Second / stepHz
 		ticker := time.NewTicker(period)
 		defer ticker.Stop()
@@ -378,7 +379,7 @@ func (world *World) Run() {
 				world.bus.Publish("world.ai", ai)
 			}
 		}
-	}()
+	})
 }
 
 // tick advances the world one step. A panic is recovered (after the lock is released) so a physics or AI bug costs

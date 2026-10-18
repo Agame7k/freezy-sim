@@ -2,6 +2,7 @@
 import { h, replace, cmdButton, toast, STATIONS, led } from "../core/dom.js";
 import { on, cmd } from "../core/store.js";
 import { registerPanel } from "../ui/dock.js";
+import { icon } from "../core/icons.js";
 
 registerPanel({
   id: "match",
@@ -11,9 +12,9 @@ registerPanel({
       h("h3", "Match control"),
       h("div.btn-row",
         cmdButton("Load test match", "match.loadTest"),
-        cmdButton("▶ Start match", "match.start", {}, "go"),
-        cmdButton("■ Abort", "match.abort", {}, "danger"),
-        cmdButton("Commit & post", "match.commit", {}, "primary"),
+        cmdButton([icon("play"), "Start match"], "match.start", {}, "go"),
+        cmdButton([icon("stop"), "Abort"], "match.abort", {}, "danger"),
+        cmdButton([icon("check"), "Commit & post"], "match.commit", {}, "primary"),
         cmdButton("Discard results", "match.discard", {}, "warn"),
       ),
       h("div.btn-row",
@@ -38,13 +39,18 @@ registerPanel({
     const directorTypes = { qualification: "Qualifications", practice: "Practice", event: "Whole event (quals → selection → playoffs)",
       selection: "Alliance selection only", playoff: "Playoffs only" };
     const directorType = h("select", Object.entries(directorTypes).map(([t, label]) => h("option", { value: t }, label)));
-    const directorLimit = h("input", { type: "number", min: 0, value: 0, style: { width: "60px" }, title: "0 = all" });
+    const directorLimit = h("input", { type: "number", min: 0, value: 0, style: { width: "64px" },
+      title: "How many matches to play (0 = all of them)", "aria-label": "Match limit" });
     const directorBody = h("div");
     replace(directorCard,
-      h("h3", "Event director", h("span.grow"), directorType, directorLimit,
+      h("h3", "Event director"),
+      h("div.row.wrap", { style: { marginBottom: "8px" } },
+        directorType,
+        h("label.row.small.muted", { style: { gap: "6px" } }, "Matches", directorLimit, h("span.hint", "0 = all")),
+        h("span.grow"),
         h("button.btn.sm.go", { onclick: () => cmd("director.start", { type: directorType.value,
-          limit: Number(directorLimit.value) || 0 }).catch((e) => toast(e.message, "error")) }, "Run"),
-        h("button.btn.sm.danger", { onclick: () => cmd("director.stop") }, "Stop")),
+          limit: Number(directorLimit.value) || 0 }).catch((e) => toast(e.message, "error")) }, icon("play", 12), "Run"),
+        h("button.btn.sm.danger", { onclick: () => cmd("director.stop") }, icon("stop", 12), "Stop")),
       directorBody);
     on("director.state", (state) => {
       if (!state) return;
@@ -61,7 +67,7 @@ registerPanel({
             h("td.mono", m.name), h("td.mono", `${m.readySecs.toFixed(0)} s`), h("td.mono", `${m.duration.toFixed(0)} s`),
             h("td.mono", m.cycleSecs ? `${(m.cycleSecs / 60).toFixed(1)} min` : "—"),
             h("td.mono", m.problem ? h("span", { style: { color: "#ff9b9b" } }, m.problem) : `${m.red}–${m.blue}`)))) : null,
-        state.winner ? h("div", { style: { margin: "6px 0", fontWeight: 600 } }, `🏆 ${state.winner}`) : null,
+        state.winner ? h("div.row", { style: { margin: "6px 0", fontWeight: 600, color: "var(--amber)" } }, icon("trophy"), state.winner) : null,
         (state.timeouts || []).map((t) => h("div.small.muted", t)),
         state.alliances?.length ? h("table.tbl",
           h("tr", h("th", "Alliance"), h("th", "Captain"), h("th", "Picks")),

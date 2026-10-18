@@ -33,6 +33,8 @@ import (
 	"github.com/Agame7k/freezy-sim/internal/winui"
 	"github.com/Agame7k/freezy-sim/internal/world"
 	"github.com/Agame7k/freezy-sim/web"
+
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 type Options struct {
@@ -103,6 +105,9 @@ func New(options Options) (*App, error) {
 	}
 	hub := bus.New()
 	app := &App{Options: options, Config: cfg, Hub: hub, startedAt: time.Now()}
+	for _, warning := range cfg.Warnings {
+		hub.Warnf("config", "%s", warning)
+	}
 
 	app.Launcher = launcher.New(cfg, hub)
 	app.Arena = arena.NewClient(cfg, hub)
@@ -145,6 +150,7 @@ func New(options Options) (*App, error) {
 		hub.Logf("world", "Match seed %d", seed)
 		// The next teams bring their robots on (and whatever the field signals did not start, starts now).
 		go func() {
+			defer safe.Recover(app.Hub, "world")
 			time.Sleep(600 * time.Millisecond)
 			app.World.FieldReset()
 		}()
@@ -161,9 +167,9 @@ func New(options Options) (*App, error) {
 		}
 		switch {
 		case modes.RedMode == arena.LedFieldCleanup && modes.BlueMode == arena.LedFieldCleanup:
-			go app.World.FieldCleanup() // (not on the bus goroutine: the world publishes under its own lock)
+			safe.Async(app.Hub, "world", app.World.FieldCleanup) // (not on the bus goroutine: the world publishes under its own lock)
 		case modes.RedMode == arena.LedFieldSafe && modes.BlueMode == arena.LedFieldSafe:
-			go app.World.FieldSafe()
+			safe.Async(app.Hub, "world", app.World.FieldSafe)
 		}
 	})
 	// The PLC's winner light show waits for the audience display's winner video to reveal the result; how long that
@@ -273,10 +279,10 @@ func (app *App) Start() {
 	app.FTA.Run()
 	app.Recorder.Run(app.World)
 	if app.Config.Arena.AutoStart && !app.Options.NoArena {
-		go app.Launcher.Start()
+		safe.Async(app.Hub, "launcher", app.Launcher.Start)
 	}
 	app.publishInfo()
-	go app.stallWatchdog()
+	safe.Go(app.Hub, "sim", app.stallWatchdog)
 	app.Hub.Logf("sim", "Freezy Sim started; GUI at %s", app.Config.GUIURL())
 }
 

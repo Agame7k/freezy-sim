@@ -14,6 +14,8 @@ import (
 	"io"
 	"os"
 	"time"
+
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 // Entry kinds.
@@ -63,6 +65,9 @@ type Recording struct {
 
 const fileMagic = "FSR1"
 
+// maxChunkBytes bounds one decompressed chunk.
+const maxChunkBytes = 256 << 20
+
 // encodeEntries packs entries as: u8 kind | i64 unix-nanos | u16 topic length | topic | u32 data length | data,
 // then compresses the lot.
 func encodeEntries(entries []Entry) []byte {
@@ -87,11 +92,20 @@ func encodeEntries(entries []Entry) []byte {
 
 // Entries decompresses the chunk.
 func (chunk *Chunk) Entries() ([]Entry, error) {
-	raw, err := io.ReadAll(flate.NewReader(bytes.NewReader(chunk.Data)))
+	// A 10 s chunk is a few MB; the limit stops a corrupt or hostile file from inflating without bound.
+	raw, err := io.ReadAll(io.LimitReader(flate.NewReader(bytes.NewReader(chunk.Data)), maxChunkBytes+1))
 	if err != nil {
 		return nil, fmt.Errorf("corrupt chunk: %w", err)
 	}
-	entries := make([]Entry, 0, chunk.Count)
+	if len(raw) > maxChunkBytes {
+		return nil, errors.New("corrupt chunk: too large")
+	}
+	// Count comes from the file, so it only sizes the slice when it is plausible (every entry is at least 15 bytes).
+	capacity := chunk.Count
+	if capacity < 0 || capacity > len(raw)/15 {
+		capacity = len(raw) / 15
+	}
+	entries := make([]Entry, 0, capacity)
 	for offset := 0; offset < len(raw); {
 		if offset+11 > len(raw) {
 			return nil, errors.New("truncated chunk entry")
@@ -127,15 +141,7 @@ func (recording *Recording) Size() int {
 
 // Save writes the recording: "FSR1" | u32 meta length | meta JSON | gob-encoded chunks.
 func Save(path string, recording *Recording) error {
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	if err := Write(file, recording); err != nil {
-		file.Close()
-		return err
-	}
-	return file.Close()
+	return safe.WriteFileFunc(path, 0o644, func(out io.Writer) error { return Write(out, recording) })
 }
 
 // Write encodes the recording in the file format Save uses.
@@ -191,14 +197,30 @@ func Load(path string) (*Recording, error) {
 		return nil, err
 	}
 	defer file.Close()
-	reader := bufio.NewReader(file)
+	recording, err := read(file)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", path, err)
+	}
+	return recording, nil
+}
+
+func read(in io.Reader) (*Recording, error) {
+	reader := bufio.NewReader(in)
 	meta, err := readMeta(reader)
 	if err != nil {
 		return nil, err
 	}
 	recording := &Recording{Meta: meta}
 	if err := gob.NewDecoder(reader).Decode(&recording.Chunks); err != nil {
-		return nil, fmt.Errorf("reading %s: %w", path, err)
+		return nil, err
 	}
+	// gob leaves nil entries for nil pointers; drop them so callers can range without checking.
+	chunks := recording.Chunks[:0]
+	for _, chunk := range recording.Chunks {
+		if chunk != nil {
+			chunks = append(chunks, chunk)
+		}
+	}
+	recording.Chunks = chunks
 	return recording, nil
 }

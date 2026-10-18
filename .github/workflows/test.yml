@@ -36,6 +36,15 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: Fuzz the packet and file parsers (briefly)
+        shell: bash
+        run: |
+          for target in "ds FuzzDecode" "ds FuzzTcpPacket" "fieldio FuzzModbusHandle" "sacn FuzzDecode" \
+                        "recorder FuzzRecording" "recorder FuzzChunk"; do
+            set -- $target
+            go test "./internal/$1" -run '^$' -fuzz "^$2\$" -fuzztime 15s
+          done
+
       - name: Build
         run: go build -o freezy-sim.exe ./cmd/freezy-sim
 

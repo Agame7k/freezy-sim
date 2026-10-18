@@ -57,6 +57,18 @@ go test ./...
 `gofmt -l` must print nothing. The unit tests need no arena. They take about a minute and a half, most of it the
 physics tests in `internal/world`; `go test ./internal/gui` and the like run in under a second.
 
+Everything that reads bytes from outside (the FMS packets, Modbus requests, sACN datagrams, recording files) has a Go
+fuzz test. `go test ./...` runs their seed inputs. If you change one of those parsers, fuzz it for a while too, one
+target at a time:
+
+```bash
+go test ./internal/ds -run '^$' -fuzz '^FuzzDecode$' -fuzztime 60s
+```
+
+The targets are `FuzzDecode` and `FuzzTcpPacket` (`internal/ds`), `FuzzModbusHandle` (`internal/fieldio`),
+`FuzzDecode` (`internal/sacn`), and `FuzzRecording` and `FuzzChunk` (`internal/recorder`). A crash is saved under the
+package's `testdata/fuzz/`; keep that file, since it then runs on every `go test` as a regression test.
+
 Then test against a real arena, matching what you changed:
 
 | You changed | Run |
@@ -87,7 +99,32 @@ it then.
 
 **Publish state.** Call `hub.Publish("area.name", value)`. It is sent to every GUI client and recorded. **Never publish
 a secret**, such as a password or a token, as a topic or a log event: both go into recordings and bug bundles. Return
-it from a command instead.
+it from a command instead. Messages from the arena are passed through `redact.JSON` before they are published, which
+blanks any field whose name looks like a secret (`WpaKey`, `*Password`, `*Token`, `*Secret`, `ApiKey`); use it for
+any other outside JSON you publish.
+
+**Start a goroutine.** A panic in any goroutine ends the whole program (and the arena with it), so don't use a bare
+`go`. Use `safe.Go(hub, "area", fn)` for a loop that must keep running: it is restarted a second after a panic. Use
+`safe.Async(hub, "area", fn)` for one-shot work that must not run twice. For a goroutine you start yourself, put
+`defer safe.Recover(hub, "area")` first. All three log the panic and write its stack to `run/logs/`, at most once
+every 30 s per area. Command handlers and bus listeners are already protected.
+
+**Save a file.** Use `safe.WriteFile` (or `safe.WriteFileFunc` to stream) for anything the sim reads back, such as
+state, settings and recordings. It writes a temporary file and renames it over the old one, so a crash or power cut
+never leaves a half-written file. It also retries when Windows (antivirus, the indexer, OneDrive) briefly holds the
+target open.
+
+**Put it in the GUI.** Give the panel a group in `GROUPS` in `web/js/ui/dock.js` (Match, Field, Simulation or
+System). For icons, use `icon(name)` from `core/icons.js`, never emoji or symbol characters, which look different on
+every PC; add a Lucide path there if one is missing. For questions, use `ask()` and `confirmAction()` from
+`core/dom.js`, never the browser's `prompt()` or `confirm()`, and pass `danger: true` for anything that deletes or
+can't be undone. One `primary` (or `go`) button per card at most; the rest stay plain. Put controls under a card's
+`h3`, not in it, unless it is a single small control. A table with more than five columns gets the `wide` class, so it
+scrolls sideways in a narrow dock instead of squeezing its cells.
+
+**Write an error message.** Write it for someone who skimmed the README: say what is wrong and what to do next, and
+show paths as they are typed (`%s` in quotes, not `%q`, which doubles every backslash). If the user can fix it in the
+GUI, say where.
 
 **Add an acceptance test.** If it can be written as a timeline, write it in JSON in `scenarios/`
 ([SCENARIOS.md](SCENARIOS.md)). For anything that needs Go, add it to `internal/scenario/suite_more.go`, following the

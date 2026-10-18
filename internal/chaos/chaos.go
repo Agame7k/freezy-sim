@@ -109,10 +109,10 @@ func New(hub *bus.Hub, arenaClient *arena.Client, w *world.World, fouls FoulCall
 			chaos.schedule = nil
 			chaos.mu.Unlock()
 			chaos.publish()
-			go chaos.endFriction()
+			safe.Async(chaos.hub, "chaos", chaos.endFriction)
 		}
 	})
-	arenaClient.OnMatchLoad(func(load arena.MatchLoad) { go chaos.onMatchLoad(load) })
+	arenaClient.OnMatchLoad(func(load arena.MatchLoad) { safe.Async(chaos.hub, "chaos", func() { chaos.onMatchLoad(load) }) })
 	chaos.registerCommands()
 	return chaos
 }
@@ -162,7 +162,7 @@ func (chaos *Chaos) planMatch() {
 	}
 	sort.Slice(chaos.schedule, func(i, j int) bool { return chaos.schedule[i].At < chaos.schedule[j].At })
 	chaos.hub.Logf("chaos", "Chaos level %d: %d problem(s) will happen this match", chaos.level, len(chaos.schedule))
-	go chaos.publish()
+	safe.Async(chaos.hub, "chaos", chaos.publish)
 }
 
 func (chaos *Chaos) tick() {

@@ -2,6 +2,7 @@
 import { h, replace, led, tag, toast, cmdButton } from "../core/dom.js";
 import { on, cmd } from "../core/store.js";
 import { registerPanel } from "../ui/dock.js";
+import { icon } from "../core/icons.js";
 import { popOutMockDs } from "../ui/mockds-link.js";
 
 const TCP_TEXT = {
@@ -55,8 +56,8 @@ function makeCard(name) {
     h("h3", { style: { textTransform: "none", letterSpacing: 0, color: "var(--text)", fontSize: "13px" } },
       h("span.mono", { style: { color: isRed ? "#ffb1b3" : "#b7d2ff", fontWeight: 700 } }, name),
       el.team, el.teamSource, h("span.grow"), el.protocol, el.tcp,
-      h("button.btn.sm.ghost", { title: "Open this team's Driver Station screen", onclick: () => popOutMockDs(name) },
-        "🖥")),
+      h("button.btn.sm.ghost.icon-only", { title: "Open this team's Driver Station screen", "aria-label": "Open Driver Station", onclick: () => popOutMockDs(name) },
+        icon("monitor"))),
     el.chain,
     h("div.row", el.mode, h("span.grow"), el.flags),
     h("div.row", { style: { marginTop: "6px" } }, h("span.small.muted", "Battery"), el.batteryTrack, el.batteryText,

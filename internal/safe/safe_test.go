@@ -40,7 +40,7 @@ func TestRecoverKeepsCallerRunning(t *testing.T) {
 	Dir = t.TempDir()
 	hub := bus.New()
 	func() {
-		defer Recover(hub, "test")
+		defer Recover(hub, "test-recover")
 		var m map[string]int
 		m["x"] = 1 // nil map write panics
 	}()
@@ -55,5 +55,30 @@ func TestDispatchRecoversHandlerPanic(t *testing.T) {
 	_, err := hub.Dispatch("explode", nil)
 	if err == nil || !strings.Contains(err.Error(), "handler bug") {
 		t.Fatalf("expected the panic as an error, got %v", err)
+	}
+}
+
+func TestReportThrottlesRepeats(t *testing.T) {
+	Dir = t.TempDir()
+	hub := bus.New()
+	for i := 0; i < 200; i++ {
+		Report(hub, "test-throttle", "every tick", nil)
+	}
+	if count := len(hub.Events()); count != 1 {
+		t.Fatalf("a repeating panic produced %d events, want 1", count)
+	}
+}
+
+func TestAsyncDoesNotRestart(t *testing.T) {
+	Dir = t.TempDir()
+	hub := bus.New()
+	var runs atomic.Int32
+	Async(hub, "test-async", func() {
+		runs.Add(1)
+		panic("once")
+	})
+	time.Sleep(1500 * time.Millisecond)
+	if got := runs.Load(); got != 1 {
+		t.Fatalf("Async ran %d times, want 1", got)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Agame7k/freezy-sim/internal/bus"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 // Stream is the world stream the GUI watches: live snapshots normally, the player's while a replay is active.
@@ -102,7 +103,7 @@ type Player struct {
 // NewPlayer creates an idle player that drives stream.
 func NewPlayer(hub *bus.Hub, stream *Stream) *Player {
 	player := &Player{hub: hub, stream: stream, speed: 1, published: make(map[string]bool)}
-	go player.loop()
+	safe.Go(hub, "replay", player.loop)
 	player.publishState()
 	return player
 }

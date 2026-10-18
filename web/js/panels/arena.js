@@ -1,5 +1,5 @@
 // Arena panel: sandbox launcher, websocket health, live start blockers and the arena process log.
-import { h, replace, led, tag, cmdButton } from "../core/dom.js";
+import { h, replace, led, tag, cmdButton, toast } from "../core/dom.js";
 import { on, onEvent, recentEvents, cmd } from "../core/store.js";
 import { registerPanel } from "../ui/dock.js";
 
@@ -43,7 +43,54 @@ registerPanel({
       if (remote?.tokenRequired) cmd("gui.remoteLinks").then((links) => renderRemote(remote, links?.urls || [])).catch(() => {});
     });
 
+    // First-run setup: the one thing a new user must do is point the simulator at their arena folder.
+    const setupCard = h("div.card.setup-card", { hidden: true });
+    const sourceInput = h("input", { type: "text", placeholder: "C:\\path\\to\\freezy-arena", "aria-label": "Arena folder path" });
+    let setupKey = "";
+    async function useSource(path) {
+      try {
+        await cmd("arena.setSource", { path });
+        toast("Arena folder saved — starting the arena…", "good");
+      } catch (err) {
+        toast(err.message, "error", 8000);
+      }
+    }
+    async function pickSource() {
+      try {
+        const result = await cmd("arena.pickSource");
+        if (result?.path) toast("Arena folder saved — starting the arena…", "good");
+      } catch (err) {
+        toast(err.message, "error", 8000);
+      }
+    }
+    function renderSetup(s) {
+      setupCard.hidden = !s?.needsSource;
+      if (!s?.needsSource) { setupKey = ""; return; }
+      const key = JSON.stringify([s.detail, s.suggestions]);
+      if (key === setupKey) return; // keep whatever is being typed
+      setupKey = key;
+      const found = s.suggestions || [];
+      replace(setupCard,
+        h("h3", "Set up: choose your arena folder"),
+        h("div.hint", "Freezy Sim runs a private copy of Freezy Arena (or Cheesy Arena) and needs to know where it is. ",
+          "Pick the folder that has ", h("span.mono", "go.mod"), " in it — usually called ",
+          h("span.mono", "freezy-arena"), " or ", h("span.mono", "cheesy-arena"), ". Your folder is only read, never changed."),
+        s.detail ? h("div.small.bad-text", s.detail.split(". Choose the arena folder")[0] + ".") : null,
+        found.length ? h("div",
+          h("div.small.muted", found.length === 1 ? "Found one on this PC:" : "Found these on this PC:"),
+          found.map((path) => h("div.btn-row.setup-found",
+            h("span.mono.small", path),
+            h("button.btn.go", { onclick: () => useSource(path) }, "Use this one")))) : null,
+        h("div.btn-row", h("button.btn", { class: found.length ? "" : "go", onclick: pickSource }, "Browse for the folder…")),
+        h("div.btn-row", sourceInput,
+          h("button.btn", { onclick: () => useSource(sourceInput.value) }, "Use this path")),
+        h("div.hint", "No arena yet? Download Freezy Arena from github.com/Freezy-Arena/freezy-arena (Code → Download ZIP), ",
+          "extract it, then choose that folder here."),
+      );
+    }
+
     el.append(
+      setupCard,
       portsCard,
       remoteCard,
       launcherCard,
@@ -55,6 +102,7 @@ registerPanel({
 
     on("arena.launcher", (s) => {
       if (!s) return;
+      renderSetup(s);
       const good = s.state === "running" || s.state === "external";
       const color = good ? (s.ready ? "green" : "amber") : s.state === "error" || s.state === "exited" ? "red" : "amber";
       replace(launcherCard,
@@ -62,7 +110,7 @@ registerPanel({
         h("div.hint", s.detail || ""),
         h("dl.kv",
           h("dt", "Mode"), h("dd", s.mode),
-          h("dt", "Source (read-only)"), h("dd", s.sourceDir || "— set arena.sourceDir in freezy-sim.json"),
+          h("dt", "Source (read-only)"), h("dd", s.sourceDir || "— not chosen yet"),
           h("dt", "Sandbox"), h("dd", s.sandboxDir),
           h("dt", "Binary"), h("dd", s.binary || "—"),
           h("dt", "PID"), h("dd", s.pid || "—"),
@@ -74,6 +122,7 @@ registerPanel({
           cmdButton("Restart", "arena.restart"),
           cmdButton("Rebuild from source", "arena.rebuild"),
           cmdButton("Reset sandbox DB", "arena.resetDb", {}, "warn"),
+          h("button.btn", { title: "Point the simulator at a different arena folder", onclick: pickSource }, "Change arena folder…"),
         ),
       );
     });

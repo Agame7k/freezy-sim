@@ -1,7 +1,10 @@
 // Always-visible top bar: connection, match, clock, scores, readiness and quick match control.
-import { h, led, replace, fmtClock, toast } from "../core/dom.js";
+import { h, led, replace, fmtClock, toast, ask } from "../core/dom.js";
+import { icon } from "../core/icons.js";
 import { on, onConnection, cmd, get } from "../core/store.js";
 import { clock } from "../core/match.js";
+import { showPanel } from "./dock.js";
+import { enterViewer } from "./viewer.js";
 
 export function mountMatchbar(host) {
   const simLed = led("red");
@@ -16,23 +19,37 @@ export function mountMatchbar(host) {
   const ready = h("span.tag", "—");
   const readyCell = h("div.mb-cell", { title: "" }, h("span.mb-label", "Field Ready"), ready);
 
-  const startButton = h("button.btn.go", { onclick: () => run("match.start") }, "▶ Start");
-  const abortButton = h("button.btn.danger", { onclick: () => run("match.abort") }, "■ Abort");
-  const commitButton = h("button.btn.primary", { onclick: () => run("match.commit") }, "Commit");
-  const testButton = h("button.btn", { onclick: () => run("match.quickTest"), title: "Load a test match with teams on the field" }, "Load Test");
-  const bundleButton = h("button.btn", {
-    title: "Save a bug-report bundle: black box, seed, live state, event + arena logs, arena database and reports",
+  const startButton = h("button.btn.go", { onclick: () => run("match.start"), title: "Start the loaded match" },
+    icon("play"), "Start");
+  const abortButton = h("button.btn.danger", { onclick: () => run("match.abort"), title: "Abort the match in progress" },
+    icon("stop"), "Abort");
+  const commitButton = h("button.btn.primary", { onclick: () => run("match.commit"), title: "Commit the results and post the score" },
+    icon("check"), "Commit");
+  const testButton = h("button.btn", { onclick: () => run("match.quickTest"), title: "Load a test match with teams on the field" },
+    icon("flask"), "Load test");
+  const viewerButton = h("button.btn.mb-viewer", {
+    title: "Watch as a spectator: just the match, on the broadcast camera, with the score (Esc to come back)",
+    onclick: enterViewer,
+  }, icon("tv"), "Viewer");
+  const bundleButton = h("button.btn.ghost", {
+    title: "Report a problem: saves a bug-report bundle (black box, seed, live state, logs, arena database and reports)",
+    "aria-label": "Report a problem",
     onclick: async () => {
-      const reason = prompt("What went wrong? (saved in the bundle)", "");
+      const reason = await ask("Report a problem", {
+        message: "Saves everything needed to reproduce it (the last 10 minutes, logs and the arena database) as a zip " +
+          "in run/reports. Passwords and tokens are removed.",
+        placeholder: "What went wrong? (optional)",
+        okLabel: "Save report",
+      });
       if (reason === null) return;
       try {
         const result = await cmd("bundle.write", { reason: reason || "saved from the GUI" });
-        toast(`Bug report saved: ${result.path}`, "info", 12000);
+        toast(`Bug report saved: ${result.path}`, "good", 12000);
       } catch (err) {
         toast(err.message, "error");
       }
     },
-  }, "🐞 Report");
+  }, icon("bug"), "Report");
 
   async function run(command) {
     try {
@@ -49,7 +66,7 @@ export function mountMatchbar(host) {
 
   replace(
     host,
-    h("div.mb-cell.mb-brand", h("span.logo"), h("div", h("b", "Freezy Sim"), brandSub)),
+    h("div.mb-cell.mb-brand", h("img.logo", { src: "/img/icon.svg", alt: "" }), h("div", h("b", "Freezy Sim"), brandSub)),
     h("div.mb-cell", h("span.mb-label", "Links"),
       h("div.row", simLed, h("span.small", "Sim"), arenaLed, arenaText)),
     h("div.mb-cell", h("span.mb-label", "Match"), matchName),
@@ -59,7 +76,7 @@ export function mountMatchbar(host) {
     h("div.mb-cell.mb-score", redScore, blueScore),
     readyCell,
     h("div.mb-spacer"),
-    h("div.mb-cell.mb-actions", testButton, startButton, abortButton, commitButton, bundleButton),
+    h("div.mb-cell.mb-actions", testButton, startButton, abortButton, commitButton, viewerButton, bundleButton),
   );
 
   // Link-loss banner: says what is down and what is being done about it, so a dropped link never looks like a frozen
@@ -71,18 +88,29 @@ export function mountMatchbar(host) {
   let arenaSeen = false;
   function updateBanner() {
     let text = "";
+    let action = null;
+    const launcher = get("arena.launcher");
+    const state = launcher?.state;
     if (!simUp) {
       text = "Lost connection to Freezy Sim — reconnecting…";
+    } else if (!arenaUp && launcher?.needsSource) {
+      // First run (or a moved folder): nothing works until the arena folder is chosen, so say so up front.
+      text = "Freezy Sim needs to know where your Freezy Arena (or Cheesy Arena) folder is.";
+      action = ["Choose arena folder", () => showPanel("arena")];
+    } else if (!arenaUp && state === "error") {
+      text = "Freezy Arena could not start: " + (launcher.detail || "see the Arena panel");
+      action = ["Open the Arena panel", () => showPanel("arena")];
     } else if (arenaSeen && !arenaUp) {
-      const launcher = get("arena.launcher");
-      const state = launcher?.state;
       text = state === "exited" ? "Freezy Arena crashed — restarting it…"
         : state === "starting" || state === "building" || state === "preparing" ? "Freezy Arena is starting…"
           : state === "stopped" ? "Freezy Arena is stopped — start it from the Arena panel."
             : "Lost connection to Freezy Arena — reconnecting…";
+    } else if (!arenaUp && (state === "building" || state === "copying" || state === "preparing")) {
+      text = "Building Freezy Arena for the first time — this can take a minute or two…";
     }
     banner.hidden = !text;
-    banner.textContent = text;
+    banner.classList.toggle("actionable", !!action);
+    replace(banner, text, action ? h("button.btn.sm", { onclick: action[1] }, action[0]) : null);
   }
 
   onConnection((connected) => {

@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { ctx, f2s } from "./util.js";
 import { h } from "../core/dom.js";
+import { icon } from "../core/icons.js";
 import { displayById, displayUrl } from "../core/displays.js";
 import { cameraSafety } from "./camerasafe.js";
 
@@ -16,7 +17,8 @@ export function setupCameras(venue, layout) {
   const dsCenters = layout.driverStation.centers;
   const presets = {
     orbit: { label: "Orbit", pos: f2s(L / 2 - 3.5, -4.8, 8.6), target: f2s(L / 2, W / 2, 0.3) },
-    audience: { label: "Audience", pos: f2s(L / 2, -11.5, 6.8), target: f2s(L / 2, W / 2 + 0.8, 1.0) },
+    // Above the back rows of the stands (they run 2.6–10.6 m back), in front of the screen behind them.
+    audience: { label: "Audience", pos: f2s(L / 2, -8.4, 9.2), target: f2s(L / 2, W / 2 + 0.6, 0.6), fov: 50 },
     table: { label: "Scoring table", pos: f2s(L / 2, W + 2.4, 2.2), target: f2s(L / 2, W / 2 - 1, 0.4) },
     broadcast: { label: "Broadcast", pos: f2s(L / 2, -2.2, 5.2), target: f2s(L / 2, W / 2 + 0.4, 0.2), fov: 58 },
     director: { label: "Auto broadcast", pos: f2s(L / 2, -3.2, 6.2), target: f2s(L / 2, W / 2, 0.3), fov: 55 },
@@ -63,6 +65,10 @@ export function setupCameras(venue, layout) {
 
   // Broadcast mode: the arena's real audience overlay (transparent background) composited over the 3D view.
   let overlay = null;
+  // It goes over the Broadcast and Auto broadcast cameras, and over every camera in viewer mode, unless the viewer chose
+  // the sim's simple score bug instead (web/js/ui/viewer.js).
+  const viewerOverlay = () => venue.viewerMode && venue.viewerOverlay !== "simple";
+  const wantsOverlay = (name) => (venue.viewerMode ? viewerOverlay() : name === "broadcast" || name === "director");
   function setOverlay(on) {
     if (on && !overlay) {
       overlay = h("iframe", {
@@ -83,7 +89,7 @@ export function setupCameras(venue, layout) {
     if (!preset) return;
     current = name;
     follow = null;
-    setOverlay(name === "broadcast" || name === "director");
+    setOverlay(wantsOverlay(name));
     if (name === "director") {
       venue.activeCamera = camera;
       try { localStorage.setItem("freezy-sim.camera", name); } catch { /* ignore */ }
@@ -115,7 +121,7 @@ export function setupCameras(venue, layout) {
     followLast.copy(object.position);
     followYaw = object.rotation.y;
     venue.director?.stop(); // (the auto-broadcast director would take the camera straight back)
-    setOverlay(false);
+    setOverlay(viewerOverlay());
     current = "follow";
     venue.activeCamera = camera;
     controls.enabled = true;
@@ -166,7 +172,7 @@ export function setupCameras(venue, layout) {
   for (const names of groups) {
     for (const name of names) {
       const button = h("button.btn.sm", { onclick: () => go(name), title: `Camera: ${presets[name].label}` },
-        presets[name].ds ? `👁 ${presets[name].label}` : presets[name].label);
+        presets[name].ds ? [icon("eye", 12), presets[name].label] : presets[name].label);
       buttons.set(name, button);
       bar.appendChild(button);
     }
@@ -183,5 +189,6 @@ export function setupCameras(venue, layout) {
   controls.target.copy(presets.orbit.target);
   go(presets[initial] ? initial : "orbit");
 
-  return { go, followRobot, presets, ortho, current: () => current };
+  const refreshOverlay = () => setOverlay(current === "follow" ? viewerOverlay() : wantsOverlay(current));
+  return { go, followRobot, presets, ortho, current: () => current, refreshOverlay };
 }

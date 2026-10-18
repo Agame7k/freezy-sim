@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Agame7k/freezy-sim/internal/inspector"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 // describeControl is a one-line reading of an FMS control packet for the protocol inspector.
@@ -527,7 +528,10 @@ func (station *Station) openUdpLocked(port int) {
 	station.udpBindErr = ""
 	station.udpConn = conn
 	station.udpBoundPort = port
-	go station.readControl(conn)
+	go func() {
+		defer safe.Recover(nil, "ds")
+		station.readControl(conn)
+	}()
 }
 
 func (station *Station) closeUdpLocked() {
@@ -593,6 +597,7 @@ func (station *Station) startSessionLocked(now time.Time) {
 	legacy := station.settings.Legacy
 	udpPort := station.desiredUdpPortLocked()
 	go func() {
+		defer safe.Recover(nil, "ds")
 		conn, err := net.DialTimeout("tcp", net.JoinHostPort(station.arenaHost, strconv.Itoa(arenaTcpPort)),
 			2*time.Second)
 		station.mu.Lock()
@@ -631,7 +636,10 @@ func (station *Station) startSessionLocked(now time.Time) {
 			station.endSession(session, err)
 			return
 		}
-		go station.tcpWriter(session)
+		go func() {
+			defer safe.Recover(nil, "ds")
+			station.tcpWriter(session)
+		}()
 		station.tcpReader(session)
 	}()
 	_ = now

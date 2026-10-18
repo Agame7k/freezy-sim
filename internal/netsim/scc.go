@@ -15,6 +15,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/Agame7k/freezy-sim/internal/inspector"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 var interfaceRange = regexp.MustCompile(`(?i)^interface range gigabitethernet\s*1/(\d+)-(\d+)$`)
@@ -75,7 +76,10 @@ func (scc *SCC) start() {
 			if err != nil {
 				return
 			}
-			go scc.serve(conn, config)
+			go func() {
+				defer safe.Recover(nil, "network")
+				scc.serve(conn, config)
+			}()
 		}
 	}()
 }

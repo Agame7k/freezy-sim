@@ -2,10 +2,16 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
+
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 // Field I/O profiles.
@@ -34,6 +40,8 @@ type Config struct {
 	SCC    SCCConfig    `json:"scc"`
 
 	path string
+	// Warnings are problems found while loading that did not stop it (e.g. a misspelled key); the app logs them.
+	Warnings []string `json:"-"`
 }
 
 type GUIConfig struct {
@@ -161,11 +169,59 @@ func Load(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	data = bytes.TrimPrefix(data, []byte("\xef\xbb\xbf")) // Notepad's UTF-8 BOM is not valid JSON
 	if err := json.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("parsing %s: %w", path, err)
+		return nil, explainJSONError(path, data, err)
+	}
+	// A misspelled key is silently ignored by Unmarshal; find it so the user learns why a setting did nothing.
+	strict := json.NewDecoder(bytes.NewReader(data))
+	strict.DisallowUnknownFields()
+	if err := strict.Decode(new(Config)); err != nil && strings.HasPrefix(err.Error(), "json: unknown field ") {
+		cfg.Warnings = append(cfg.Warnings, fmt.Sprintf("%s has a setting the simulator does not know, %s, so it is "+
+			"ignored (check the spelling against docs/CONFIGURATION.md)", path, strings.TrimPrefix(err.Error(), "json: unknown field ")))
 	}
 	cfg.path = path
 	return cfg, nil
+}
+
+// explainJSONError turns a JSON error into a line and column plus the usual cause, for people editing the config by
+// hand in Notepad.
+func explainJSONError(path string, data []byte, err error) error {
+	var syntax *json.SyntaxError
+	var typeErr *json.UnmarshalTypeError
+	switch {
+	case errors.As(err, &syntax):
+		line, column := 1, 1
+		for _, b := range data[:min(int(syntax.Offset), len(data))] {
+			if b == '\n' {
+				line, column = line+1, 1
+			} else {
+				column++
+			}
+		}
+		hint := "check for a missing comma or quote, or an extra comma before } or ]"
+		if strings.Contains(syntax.Error(), "escape") {
+			hint = `Windows paths need forward slashes or doubled backslashes in JSON: write "C:/arena" or "C:\\arena", not "C:\arena"`
+		}
+		return fmt.Errorf("%s is not valid JSON at line %d, column %d (%v): %s", path, line, column, syntax, hint)
+	case errors.As(err, &typeErr):
+		want := typeErr.Type.String()
+		switch typeErr.Type.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8,
+			reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64:
+			want = "a number (no quotes)"
+		case reflect.Bool:
+			want = "true or false (no quotes)"
+		case reflect.String:
+			want = "text in quotes"
+		case reflect.Slice, reflect.Array:
+			want = "a list in [ ]"
+		case reflect.Struct, reflect.Map:
+			want = "a section in { }"
+		}
+		return fmt.Errorf("%s: the setting %q should be %s, not a %s", path, typeErr.Field, want, typeErr.Value)
+	}
+	return fmt.Errorf("parsing %s: %w", path, err)
 }
 
 // Save writes the config back to the file it was loaded from.
@@ -177,7 +233,7 @@ func (cfg *Config) Save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(cfg.path, data, 0644)
+	return safe.WriteFile(cfg.path, data, 0o644)
 }
 
 // Path returns the file the config was loaded from.

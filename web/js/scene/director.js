@@ -1,7 +1,8 @@
 // Auto broadcast: an AI camera director. It scores what is happening on the field twice a second (volleys and
-// shooting runs, defenders shoving shooters, PIN counts, foul calls, end-game climbs, human-player throws, the start
-// and end of the match) and works like a broadcast crew: it holds a shot for a few seconds, then cuts to another
-// camera position on the best play, panning and slowly pushing in on the action within a shot, with a lower-third
+// shooting runs, defenders shoving shooters, robots battling for position, an alliance on a scoring run, PIN counts,
+// foul calls, end-game climbs, human-player throws; before a match it introduces each alliance, after it the result)
+// and works like a broadcast crew: it holds a shot for a few seconds, then cuts to another camera position on the best
+// play, shares airtime between the robots, panning and slowly pushing in on the action within a shot, with a lower-third
 // caption saying what the viewer is watching.
 import * as THREE from "three";
 import { on, get } from "../core/store.js";
@@ -28,6 +29,22 @@ export function setupDirector(venue, layout) {
   let lastThink = 0;
   let wobble = 0;
   const safety = venue.cameraSafety;
+  // Who has had the camera lately (so airtime is shared), and each alliance's recent score (to spot a scoring run).
+  const shownAt = {};
+  const scoreLog = { red: [], blue: [] };
+  on("arena.realtimeScore", (score) => {
+    const t = performance.now() / 1000;
+    for (const [key, alliance] of [["red", "Red"], ["blue", "Blue"]]) {
+      const value = score?.[alliance]?.ScoreSummary?.Score;
+      if (value == null) continue;
+      scoreLog[key].push([t, value]);
+      while (scoreLog[key].length && t - scoreLog[key][0][0] > 6) scoreLog[key].shift();
+    }
+  });
+  const scoringRun = (alliance) => {
+    const log = scoreLog[alliance];
+    return log.length > 1 ? log[log.length - 1][1] - log[0][1] : 0;
+  };
 
   on("world.ai", (data) => {
     ai = {};
@@ -56,9 +73,34 @@ export function setupDirector(venue, layout) {
     const list = [];
     const c = clock();
     const state = c.state;
-    if (state === 0) list.push({ score: 1, kind: "wide", text: "Teams ready on the field" });
-    if (state === 1 || (state === 2 && c.elapsed < 2)) list.push({ score: 9, kind: "wide", text: "AUTO underway" });
-    if (state === 5) list.push({ score: 3, kind: "wide", text: "Final whistle: scoring assessment" });
+    const onField = (alliance) => STATIONS.filter((s) => (!alliance || s[0] === alliance) && robotPos(s));
+    const points = (stations) => stations.map((s) => robotPos(s).clone());
+    const teams = (stations) => stations.map((s) => venue.robots[s].team).join(" · ");
+    if (state === 0) {
+      // Before the match, like a broadcast: the venue, then each alliance in turn.
+      const beat = Math.floor(performance.now() / 6000) % 3;
+      const red = onField("R");
+      const blue = onField("B");
+      if (beat === 1 && red.length) {
+        list.push({ score: 2, kind: "group", points: points(red), key: "intro-R", text: `Red alliance: ${teams(red)}` });
+      } else if (beat === 2 && blue.length) {
+        list.push({ score: 2, kind: "group", points: points(blue), key: "intro-B", text: `Blue alliance: ${teams(blue)}` });
+      } else {
+        list.push({ score: 2, kind: "establish", key: "intro-venue", text: red.length ? "Teams ready on the field" : "Waiting for the next match" });
+      }
+    }
+    if (state === 1 || (state === 2 && c.elapsed < 2.5)) {
+      list.push({ score: 9, kind: "group", points: points(onField()), key: "auto-start", text: "AUTO underway" });
+    }
+    if (state === 5) {
+      const s = get("arena.realtimeScore");
+      const red = s?.Red?.ScoreSummary?.Score ?? 0;
+      const blue = s?.Blue?.ScoreSummary?.Score ?? 0;
+      const text = red === blue ? `Final: ${red}–${blue}, a tie`
+        : `Final: ${red > blue ? "Red" : "Blue"} wins ${Math.max(red, blue)}–${Math.min(red, blue)}`;
+      const beat = Math.floor(performance.now() / 7000) % 2;
+      list.push({ score: 3, kind: beat ? "establish" : "group", points: points(onField()), key: `final-${beat}`, text });
+    }
     // Head referee presenting a card.
     const cardUntil = venue.officials?.headRef?.cardUntil || 0;
     if (cardUntil > performance.now()) {
@@ -108,10 +150,45 @@ export function setupDirector(venue, layout) {
         list.push({ score: 3.5, kind: "human", outpost, text: `${alliance === "red" ? "Red" : "Blue"} human player throws for the hub` });
       }
     }
+    if (state === 2 || state === 4) {
+      // Opposing robots in contact: a battle for position, framed between the two.
+      for (const r of onField("R")) {
+        for (const b of onField("B")) {
+          const pr = robotPos(r);
+          const pb = robotPos(b);
+          if (pr.distanceTo(pb) < 1.4) {
+            list.push({ score: 5, kind: "action", at: pr.clone().add(pb).multiplyScalar(0.5), subject: r, partner: b,
+              key: `battle-${r}-${b}`, text: `${label(r)} and ${label(b)} battle for position` });
+          }
+        }
+      }
+      // An alliance on a scoring run: its scorers are worth watching.
+      for (const [alliance, letter, name] of [["red", "R", "Red"], ["blue", "B", "Blue"]]) {
+        const gain = scoringRun(alliance);
+        if (gain < 10) continue;
+        for (const play of list) {
+          if (play.kind === "action" && play.subject?.[0] === letter) {
+            play.score += 2;
+            play.text += ` · ${name} on a ${gain}-point run`;
+          }
+        }
+      }
+    }
     if (c.state === 4 && c.remaining < 20) {
       for (const play of list) if (play.kind === "tower") play.score += 3;
     }
-    list.push({ score: 1.5, kind: "wide", text: c.shift ? `${c.period} — ${c.shift}` : c.period });
+    // Share the airtime: a robot that was just on screen waits its turn, and one nobody has seen for a while gets a
+    // look. (Not the robot in the current shot, or the director would cut away from it every few seconds.)
+    const now = performance.now() / 1000;
+    for (const play of list) {
+      if (!play.subject || (shot && play.subject === shot.play.subject)) continue;
+      const since = now - (shownAt[play.subject] ?? -1e9);
+      if (since < 10) play.score *= 0.7;
+      else if (since > 25) play.score += 1;
+    }
+    const all = onField();
+    list.push({ score: 1.5, kind: all.length ? "group" : "establish", points: points(all), key: "wide",
+      text: c.shift ? `${c.period} — ${c.shift}` : c.period });
     return list.sort((a, b) => b.score - a.score);
   }
 
@@ -120,10 +197,12 @@ export function setupDirector(venue, layout) {
   function frame(play) {
     const angle = Math.random();
     switch (play.kind) {
+      case "establish":
       case "wide":
-        return angle < 0.5
-          ? { pos: V(L / 2, audienceSide < 0 ? -3.2 : W + 3.2, 6.2), target: V(L / 2, W / 2, 0.3), fov: 55 }
-          : { pos: V(L / 2 + (Math.random() - 0.5) * 6, audienceSide < 0 ? -1.4 : W + 1.4, 3.6), target: V(L / 2, W / 2, 0.4), fov: 62 };
+        // The whole field from high in the stands (above the back rows), drifting a little left or right each time.
+        return { pos: V(L / 2 + (angle - 0.5) * 4, audienceSide < 0 ? -7.6 : W + 7.6, 8.4), target: V(L / 2, W / 2, 0.4), fov: 50 };
+      case "group":
+        return fitGroup(play.points);
       case "official": {
         const o = play.official.root.position;
         const side = o.z > 0 ? 1 : -1;
@@ -166,7 +245,40 @@ export function setupDirector(venue, layout) {
     }
   }
 
+  // A shot from the audience side that fits every point (robots) in frame with room around them: the camera backs off
+  // and rises as far as the group needs, but never into the stands' crowd or behind the screen at their back.
+  function fitGroup(list) {
+    if (!list || !list.length) return frame({ kind: "establish" });
+    const box = new THREE.Box3().setFromPoints(list);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const fov = 46;
+    const canvas = venue.renderer?.domElement;
+    const aspect = (canvas?.clientWidth || 16) / (canvas?.clientHeight || 9);
+    const tanV = Math.tan(THREE.MathUtils.degToRad(fov / 2));
+    const halfAlong = size.x / 2 + 1.6; // scene x runs along the field
+    const halfAcross = size.z / 2 + 1.2;
+    const distance = Math.min(15, Math.max(5.5, halfAlong / (tanV * aspect) + halfAcross, (halfAcross + 1) / tanV));
+    const towardAudience = -audienceSide; // scene +z is the field's −y side
+    const pos = center.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.5, distance * 0.55, towardAudience * distance * 0.84));
+    // Stay in front of the screen behind the stands, and above the crowd's heads at whatever depth the camera is.
+    const sideline = W / 2;
+    let depth = Math.abs(pos.z) - sideline;
+    if (depth > 8.4) {
+      pos.z = towardAudience * (sideline + 8.4);
+      depth = 8.4;
+    }
+    if (depth > 2.4) pos.y = Math.max(pos.y, 0.53 * (depth - 2.4) + 3.0);
+    const target = center.clone().add(new THREE.Vector3(0, 0.3, 0));
+    if (safety && !safety.sees(pos, target)) pos.y += 2.5;
+    return { pos, target, fov };
+  }
+
   function cut(play, now) {
+    if (shot?.play.subject) shownAt[shot.play.subject] = now; // (it was on screen until now)
+    if (shot?.play.partner) shownAt[shot.play.partner] = now;
+    if (play.subject) shownAt[play.subject] = now;
+    if (play.partner) shownAt[play.partner] = now;
     const framing = frame(play);
     if (safety && framing.target) framing.pos = safety.clear(framing.target, framing.pos, 0.35).pos; // never inside a wall
     shot = { play, ...framing, push: 0 };
@@ -184,19 +296,33 @@ export function setupDirector(venue, layout) {
     const now = performance.now() / 1000;
     if (now - lastThink > 0.5) {
       lastThink = now;
-      const best = plays()[0];
+      const list = plays();
+      const best = list[0];
       const held = now - shotStarted;
-      const same = shot && best.kind === shot.play.kind && best.subject === shot.play.subject && best.official === shot.play.official;
-      if (!shot || (held > MIN_SHOT && !same && (best.score > lastScore * CUT_MARGIN || held > MAX_SHOT)) ||
+      const isCurrent = (play) => shot && play.kind === shot.play.kind && play.subject === shot.play.subject &&
+        play.official === shot.play.official && play.key === shot.play.key;
+      const same = isCurrent(best);
+      // A shot that has run its length moves on to the next best different play, if there is one worth showing;
+      // only with nothing else going on does it take a fresh angle on the same play.
+      const next = same && held > MAX_SHOT ? list.find((play) => !isCurrent(play) && play.score >= best.score * 0.45) : null;
+      if (next) {
+        cut(next, now);
+      } else if (!shot || (held > MIN_SHOT && !same && (best.score > lastScore * CUT_MARGIN || held > MAX_SHOT)) ||
         (held > MAX_SHOT * 1.6)) {
         cut(best, now);
       } else if (same) {
         lastScore = best.score;
         caption.textContent = best.text;
         if (best.at) shot.play.at = best.at;
+        if (best.points) shot.play.points = best.points;
       }
     }
     if (!shot) return;
+    // A group shot pans gently to keep the group centered as the robots move.
+    if (shot.play.kind === "group" && shot.play.points?.length) {
+      const center = new THREE.Box3().setFromPoints(shot.play.points).getCenter(new THREE.Vector3());
+      controls.target.lerp(center.add(new THREE.Vector3(0, 0.3, 0)), Math.min(1, dt * 1.2));
+    }
     // Within a shot: the operator pans to keep the subject framed, a rail camera dollies along the guardrail to keep
     // up, pushes in slowly (less on a fast-moving subject), with a little hand-held drift. If the subject leaves the
     // frame or goes behind something, the director re-frames instead of holding a shot of nothing.
@@ -226,7 +352,7 @@ export function setupDirector(venue, layout) {
       }
     }
     shot.push += dt;
-    const pushRate = speed > 1.5 ? 0.15 : 0.6;
+    const pushRate = shot.play.kind === "group" ? 0.2 : speed > 1.5 ? 0.15 : 0.6; // (a group shot must keep everyone in)
     camera.fov = Math.max(shot.fov * 0.82, camera.fov - dt * pushRate);
     wobble += dt;
     const drift = new THREE.Vector3(Math.sin(wobble * 0.7) * 0.02, Math.sin(wobble * 0.9) * 0.015, 0);

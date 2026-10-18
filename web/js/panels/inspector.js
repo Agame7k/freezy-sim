@@ -17,7 +17,7 @@ registerPanel({
   mount(el) {
     const controls = h("div.card");
     const rates = h("div.row.wrap.small");
-    const list = h("div.log", { style: { height: "460px", fontFamily: "monospace" } });
+    const list = h("div.log.packets", { style: { height: "460px" } });
     const detail = h("div.small.mono", { style: { whiteSpace: "pre-wrap", wordBreak: "break-all", marginTop: "6px" } });
     el.append(controls, h("div.card", rates, list, detail));
 

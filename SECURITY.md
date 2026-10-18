@@ -37,8 +37,8 @@ Nothing, unless you send it. Freezy Sim has no telemetry and makes no network co
 arena. The sandbox arena is configured with The Blue Alliance and Nexus turned off. Building the arena downloads its
 Go modules, through Go's normal module proxy.
 
-**Bug-report bundles** are meant to be shared. They have passwords and access tokens removed, but they do include the
-sandbox arena's database (teams, schedule, results) and logs. Look inside one before you post it publicly, if your
+**Bug-report bundles** are meant to be shared. They have passwords, access tokens and team Wi-Fi keys removed, but they do
+include the sandbox arena's database (teams and their Wi-Fi keys, schedule, results) and logs. Look inside one before you post it publicly, if your
 event data is private.
 
 ## Scope

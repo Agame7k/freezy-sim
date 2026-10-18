@@ -76,8 +76,15 @@ You don't need to build or run the arena yourself. The sim does that.
 
 ## 4. Configure
 
-In the sim folder, copy `config.example.json` to `freezy-sim.json` and set `arena.sourceDir` to the arena folder. Use
-forward slashes, or double the backslashes:
+**Usually there is nothing to do.** On the first run the sim looks for an arena folder in the usual places: next to
+the sim folder, and in your home, Documents, Desktop, Downloads, `source`, `code`, GitHub and OneDrive folders. If it
+finds exactly one, it uses it and saves it to `freezy-sim.json`. If it finds none, or several, a red banner at the top
+says so; press **Choose arena folder** and either pick one it found, browse for it, or paste the path. Pick the folder
+with `go.mod` in it. If you pick the folder around it (where a zip was extracted, say), the sim tells you which folder
+inside to pick instead. You can change it later with **Change arena folder…** in the **Arena** panel.
+
+To set it by hand instead, copy `config.example.json` to `freezy-sim.json` in the sim folder and set
+`arena.sourceDir` to the arena folder. Use forward slashes, or double the backslashes:
 
 ```json
 {
@@ -110,17 +117,18 @@ Double-click `freezy-sim.exe`, or run it from a terminal to watch the log. This 
    the AP, switch and SCC addresses, and TBA publishing off, so simulated results never reach The Blue Alliance.
 6. The main window opens on the 3D venue.
 
-The **Arena** panel shows each of these steps. If one fails, it says why there, and
+The **Arena** panel shows each of these steps. If one fails, a red banner at the top of the window says what went
+wrong, with a button that takes you to the fix. The Arena panel has the details, and
 [TROUBLESHOOTING.md](TROUBLESHOOTING.md) has the fixes.
 
 ![The Arena panel: the sandbox running, start-match conditions and the field services as the arena sees them](images/panel-arena.png)
 
 ## 6. Play a match
 
-1. Press **Load Test** in the top bar. The arena loads a test match, the six driver stations connect, and the robots
+1. Press **Load test** in the top bar. The arena loads a test match, the six driver stations connect, and the robots
    are carted onto the field.
 2. Wait for **Field Ready** to turn green. Hover over it to see what the arena is still waiting for.
-3. Press **▶ Start**. Watch auto, the hub shifts, teleop and the endgame. The referees score the climbs, and the hub
+3. Press **Start**. Watch auto, the hub shifts, teleop and the endgame. The referees score the climbs, and the hub
    LEDs come from the arena's real sACN packets.
 4. After the match, the sim checks the arena's score against what really happened on the field (the **score check** in
    the Match panel).

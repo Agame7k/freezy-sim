@@ -9,6 +9,8 @@ import (
 
 	"github.com/Agame7k/freezy-sim/internal/arena"
 	"github.com/Agame7k/freezy-sim/internal/config"
+	"github.com/Agame7k/freezy-sim/internal/safe"
+	"github.com/Agame7k/freezy-sim/internal/winui"
 )
 
 // SettingsContributor adds arena settings needed by one simulated device.
@@ -152,6 +154,7 @@ func (app *App) refillTestMatch(load arena.MatchLoad) {
 		return // this load is our own QuickTestMatch on its way to substituting the teams
 	}
 	go func() {
+		defer safe.Recover(app.Hub, "setup")
 		time.Sleep(400 * time.Millisecond)
 		app.testMu.Lock()
 		busy := time.Since(app.fillingTest) < 5*time.Second
@@ -169,6 +172,17 @@ func (app *App) registerSetupCommands() {
 	app.Arena.OnConnect(app.autoSetup)
 	app.Arena.OnMatchLoad(app.refillTestMatch)
 	app.Hub.Handle("arena.configure", func(_ []byte) (any, error) { return app.ConfigureArena() })
+	// The native folder picker opens on the simulator PC (a remote viewer types the path instead).
+	app.Hub.Handle("arena.pickSource", func(_ []byte) (any, error) {
+		if !winui.Available {
+			return nil, fmt.Errorf("no folder picker here: type the arena folder path instead")
+		}
+		dir := winui.PickFolder("Choose your Freezy Arena or Cheesy Arena folder (the one with go.mod in it)")
+		if dir == "" {
+			return map[string]any{"cancelled": true}, nil
+		}
+		return map[string]any{"path": dir}, app.Launcher.SetSource(dir)
+	})
 	app.Hub.Handle("arena.desiredSettings", func(_ []byte) (any, error) { return app.DesiredArenaSettings(), nil })
 	app.Hub.Handle("arena.readSettings", func(_ []byte) (any, error) { return app.Arena.ReadSettings() })
 	app.Hub.Handle("arena.seedTeams", func(_ []byte) (any, error) { return app.SeedTeams() })

@@ -1,7 +1,8 @@
 // Replay panel: the black box, saved match recordings, and the transport that plays them back into the whole GUI.
-import { h, replace, tag, toast, fmtClock } from "../core/dom.js";
+import { h, replace, tag, toast, fmtClock, confirmAction } from "../core/dom.js";
 import { on, cmd } from "../core/store.js";
 import { registerPanel } from "../ui/dock.js";
+import { icon } from "../core/icons.js";
 
 const run = (command, args) => cmd(command, args).catch((e) => toast(e.message, "error"));
 const SPEEDS = [0.25, 0.5, 1, 2, 4, 8];
@@ -13,7 +14,7 @@ const clock = (seconds) => fmtClock(Math.max(0, seconds));
 function createTransport(cls) {
   let state = null;
   let scrubbing = false;
-  const play = h("button.btn.sm", { onclick: () => run(state?.playing ? "replay.pause" : "replay.play") }, "▶");
+  const play = h("button.btn.sm", { "aria-label": "Play", onclick: () => run(state?.playing ? "replay.pause" : "replay.play") }, icon("play"));
   const back = h("button.btn.sm", { title: "Back 5 s", onclick: () => run("replay.seek", { position: state.position - 5 }) }, "−5s");
   const forward = h("button.btn.sm", { title: "Forward 5 s", onclick: () => run("replay.seek", { position: state.position + 5 }) }, "+5s");
   const scrubber = h("input", { type: "range", min: 0, max: 1, step: 0.1, value: 0, style: { flex: "1", minWidth: "80px" } });
@@ -30,7 +31,7 @@ function createTransport(cls) {
     state = next;
     bar.style.display = next?.active ? "" : "none";
     if (!next?.active) return;
-    play.textContent = next.playing ? "❚❚" : "▶";
+    replace(play, icon(next.playing ? "pause" : "play"));
     play.title = next.playing ? "Pause" : "Play";
     label.textContent = next.meta.label;
     label.title = `Recorded ${new Date(next.meta.start).toLocaleString()}`;
@@ -123,13 +124,13 @@ registerPanel({
             h("td", h("div.row",
               h("button.btn.sm.primary", { onclick: () => run("replay.load", { name: r.name }) }, "Replay"),
               h("button.btn.sm.ghost", {
-                title: "Delete this recording",
+                title: "Delete this recording", "aria-label": "Delete recording",
                 onclick: async () => {
-                  if (!confirm(`Delete ${r.meta.label}?`)) return;
+                  if (!(await confirmAction(`Delete ${r.meta.label}?`, { message: "The recording file is deleted. This can't be undone.", okLabel: "Delete", danger: true }))) return;
                   await run("recorder.delete", { name: r.name });
                   refresh();
                 },
-              }, "✕")))))) : h("div.hint", "No recordings yet. Play a match and it will show up here."));
+              }, icon("x"))))))) : h("div.hint", "No recordings yet. Play a match and it will show up here."));
     }
     renderLibrary();
   },

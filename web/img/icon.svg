@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Freezy Sim">
+  <!-- The app icon: the banner's red and blue logo mark, with a snowflake for "Freezy". -->
+  <defs>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff6b6e"/>
+      <stop offset="1" stop-color="#d63a3e"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5aa0ff"/>
+      <stop offset="1" stop-color="#2f74e0"/>
+    </linearGradient>
+    <g id="arm">
+      <line x1="0" y1="0" x2="0" y2="-150"/>
+      <polyline points="-40,-138 0,-98 40,-138"/>
+      <polyline points="-30,-78 0,-50 30,-78"/>
+    </g>
+    <g id="flake">
+      <use href="#arm"/>
+      <use href="#arm" transform="rotate(60)"/>
+      <use href="#arm" transform="rotate(120)"/>
+      <use href="#arm" transform="rotate(180)"/>
+      <use href="#arm" transform="rotate(240)"/>
+      <use href="#arm" transform="rotate(300)"/>
+    </g>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="#0b0e13"/>
+  <rect x="4" y="4" width="504" height="504" rx="108" fill="none" stroke="#2c3646" stroke-width="8"/>
+
+  <!-- Red and blue alliance halves -->
+  <path d="M112 60h144v392H112a52 52 0 0 1-52-52V112a52 52 0 0 1 52-52z" fill="url(#red)"/>
+  <path d="M256 60h144a52 52 0 0 1 52 52v288a52 52 0 0 1-52 52H256z" fill="url(#blue)"/>
+
+  <!-- Snowflake: a dark outline under white strokes so it reads on both halves -->
+  <g transform="translate(256 256)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <use href="#flake" stroke="#0b0e13" stroke-width="44"/>
+    <use href="#flake" stroke="#ffffff" stroke-width="22"/>
+    <circle r="22" fill="#ffffff" stroke="#0b0e13" stroke-width="0"/>
+  </g>
+</svg>

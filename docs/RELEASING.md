@@ -87,7 +87,7 @@ This checks formatting, vet and tests, then builds a trimmed, stamped exe. It wr
 - [ ] `freezy-sim.exe -version` prints the right version.
 - [ ] Run it with no config: the log says to create `freezy-sim.json`.
 - [ ] Add a config pointing at an arena, run it, and play one test match.
-- [ ] ⚙ → Field model shows "The official CAD isn't included…", and importing a `.glb` works.
+- [ ] Graphics button → Field model shows "The official CAD isn't included…", and importing a `.glb` works.
 
 ## 6. Publish
 

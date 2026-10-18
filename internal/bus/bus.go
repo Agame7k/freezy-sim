@@ -86,7 +86,7 @@ func (hub *Hub) Publish(topic string, value any) {
 	listeners := hub.topicListeners
 	hub.mu.Unlock()
 	for _, listener := range listeners {
-		listener(topic, data)
+		callListener(topic, func() { listener(topic, data) })
 	}
 }
 
@@ -158,7 +158,7 @@ func (hub *Hub) Emit(level, source, msg string) {
 
 	log.Printf("[%s] %s: %s", strings.ToUpper(level), source, msg)
 	for _, listener := range listeners {
-		listener(event)
+		callListener("event", func() { listener(event) })
 	}
 }
 
@@ -262,4 +262,15 @@ func (hub *Hub) broadcastLocked(message []byte) {
 			}
 		}
 	}
+}
+
+// callListener runs one in-process listener; a panic is logged (not emitted as an event, which could loop back into a
+// failing event listener) so one subsystem's bug cannot break publishing for every other one.
+func callListener(what string, fn func()) {
+	defer func() {
+		if value := recover(); value != nil {
+			log.Printf("[ERROR] bus: listener for %s crashed: %v\n%s", what, value, debug.Stack())
+		}
+	}()
+	fn()
 }

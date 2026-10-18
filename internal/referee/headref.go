@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Agame7k/freezy-sim/internal/bus"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 	"github.com/Agame7k/freezy-sim/internal/world"
 )
 
@@ -89,7 +90,9 @@ func (head *HeadRef) load() {
 func (head *HeadRef) saveLocked() {
 	data, _ := json.MarshalIndent(headRefFile{Phase: head.phase, Ledger: head.ledger, Log: head.log}, "", "  ")
 	_ = os.MkdirAll(filepath.Dir(head.path), 0o755)
-	_ = os.WriteFile(head.path, data, 0o644)
+	if err := safe.WriteFile(head.path, data, 0o644); err != nil {
+		head.hub.Warnf("referee", "Could not save the head referee ledger: %v", err)
+	}
 }
 
 func (head *HeadRef) record(team int) *teamRecord {

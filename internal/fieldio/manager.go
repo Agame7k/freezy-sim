@@ -352,6 +352,7 @@ func (manager *Manager) registerCommands() {
 			return nil, err
 		}
 		go func() {
+			defer safe.Recover(manager.hub, "fieldio")
 			time.Sleep(time.Duration(request.Ms) * time.Millisecond)
 			_ = manager.Field.Set(request.Control, request.Index, false)
 		}()

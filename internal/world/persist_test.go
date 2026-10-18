@@ -1,6 +1,7 @@
 package world
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -56,3 +57,19 @@ func TestPanickingControllerDoesNotStopPhysics(t *testing.T) {
 type panicController struct{}
 
 func (panicController) Update(*Robot, *World, float64) { panic("ai bug") }
+
+func TestLoadStateKeepsCorruptFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state.json")
+	if err := os.WriteFile(path, []byte(`{"teamSkill": {`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	world, _, _ := newTestWorld(t)
+	if err := world.LoadState(path); err == nil {
+		t.Fatal("a truncated state file loaded without error")
+	}
+	matches, _ := filepath.Glob(path + ".corrupt-*")
+	if len(matches) != 1 {
+		t.Fatalf("the damaged state was not kept aside (found %v)", matches)
+	}
+}

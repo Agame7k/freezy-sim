@@ -3,9 +3,12 @@ package world
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 // SavedState is what the world remembers between sessions (run/state.json): each team's robot design and drive-team
@@ -41,6 +44,11 @@ func (world *World) LoadState(path string) error {
 	}
 	var state SavedState
 	if err := json.Unmarshal(data, &state); err != nil {
+		// Keep the damaged file: the next save would otherwise overwrite every team's learned history for good.
+		backup := path + ".corrupt-" + time.Now().Format("20060102-150405")
+		if renameErr := os.Rename(path, backup); renameErr == nil {
+			return fmt.Errorf("%w (the damaged file was kept as %s)", err, backup)
+		}
 		return err
 	}
 	world.mu.Lock()
@@ -196,13 +204,7 @@ func (world *World) saveState() {
 		world.bus.Warnf("world", "Could not save robot designs: %v", err)
 		return
 	}
-	// Write then rename so a crash mid-save never leaves a truncated file.
-	temp := path + ".tmp"
-	if err := os.WriteFile(temp, data, 0o644); err != nil {
-		world.bus.Warnf("world", "Could not save robot designs: %v", err)
-		return
-	}
-	if err := os.Rename(temp, path); err != nil {
+	if err := safe.WriteFile(path, data, 0o644); err != nil {
 		world.bus.Warnf("world", "Could not save robot designs: %v", err)
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Agame7k/freezy-sim/internal/recorder"
+	"github.com/Agame7k/freezy-sim/internal/redact"
 )
 
 // A bug-report bundle is one zip with everything needed to understand (and replay) a problem the sim found: the
@@ -102,7 +103,7 @@ func (app *App) WriteBundle(reason string, blackBox time.Duration) (string, erro
 		})
 	}
 
-	addJSON("topics.json", "every live bus topic", app.Hub.Topics())
+	addJSON("topics.json", "every live bus topic", redactedTopics(app.Hub.Topics()))
 	add("events.log", "sim + arena event log", func(w io.Writer) error {
 		for _, event := range app.Hub.Events() {
 			fmt.Fprintf(w, "%s %-5s %-10s %s\n", event.Time.Format("15:04:05.000"), event.Level, event.Source,
@@ -223,9 +224,7 @@ func redactedConfig(cfg any) any {
 		switch node := node.(type) {
 		case map[string]any:
 			for key, child := range node {
-				lower := strings.ToLower(key)
-				if strings.Contains(lower, "password") || strings.Contains(lower, "token") ||
-					strings.Contains(lower, "secret") {
+				if redact.IsSecretKey(key) {
 					if text, ok := child.(string); ok && text == "" {
 						continue // an empty value says "not set", which helps a bug report
 					}
@@ -242,4 +241,14 @@ func redactedConfig(cfg any) any {
 	}
 	walk(value)
 	return value
+}
+
+// redactedTopics blanks any secret left in a topic value. (Arena messages are already redacted when they are
+// published; this is the second line of defense for a bundle that may be shared.)
+func redactedTopics(topics map[string]json.RawMessage) map[string]json.RawMessage {
+	out := make(map[string]json.RawMessage, len(topics))
+	for name, data := range topics {
+		out[name] = redact.JSON(data)
+	}
+	return out
 }

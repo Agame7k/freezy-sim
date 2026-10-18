@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Agame7k/freezy-sim/internal/safe"
 	"github.com/Agame7k/freezy-sim/internal/world"
 	"github.com/Agame7k/freezy-sim/web"
 )
@@ -70,6 +71,7 @@ func (app *App) registerTraining() {
 		mu.Unlock()
 		publish()
 		go func() {
+			defer safe.Recover(app.Hub, "training")
 			layout, err := world.LoadLayout(web.Files)
 			if err != nil {
 				mu.Lock()

@@ -67,7 +67,9 @@ event, and side-by-side comparisons of two arena versions, all with HTML and JUn
   boxes), sACN hub LEDs, a Vivid-style AP, a Cisco-style switch and two SCCs over SSH. The arena configures and talks
   to them exactly as it would at an event.
 - **A full 3D venue.** The 2026 field (or FIRST's official CAD, if you import it), live hub LEDs and stack lights from
-  the arena's own packets, every arena display on screens around the venue, and broadcast cameras.
+  the arena's own packets, every arena display on screens around the venue, and an AI broadcast camera director.
+- **A spectator view.** Viewer mode shows just the match: the broadcast camera with the arena's own audience overlay
+  keyed over it, as a stream would show it. Give spectators the `?view=viewer` link.
 - **Matches that play themselves.** Swerve robots with real motor curves, FUEL physics and hub flow, team-built robot
   designs, autonomous routines, AI strategy that learns across an event, human players, a head referee who calls
   fouls, an FTA, and a field crew who reset the field between matches.
@@ -129,8 +131,10 @@ moves a running `freezy-sim.exe` aside so the build is not blocked.
 git clone https://github.com/Freezy-Arena/freezy-arena.git
 ```
 
-**3. Point the sim at it.** Copy `config.example.json` to `freezy-sim.json` in the sim folder and set
-`arena.sourceDir`:
+**3. Point the sim at it.** Usually automatic: on the first run the sim looks for the arena next to its own folder and
+in your home, Documents, Desktop, Downloads and OneDrive folders. If it can't tell which one you mean, a banner asks you
+to choose the folder (the one with `go.mod` in it). To set it by hand, copy `config.example.json` to `freezy-sim.json`
+in the sim folder and set `arena.sourceDir`:
 
 ```json
 { "arena": { "sourceDir": "C:/path/to/freezy-arena" } }
@@ -139,7 +143,7 @@ git clone https://github.com/Freezy-Arena/freezy-arena.git
 For Cheesy Arena, also set `"field": { "profile": "plc" }` (see [Compatibility](#compatibility)).
 
 **4. Run `freezy-sim.exe`.** The sim builds the arena into a sandbox under `run/arena/`, starts it there, configures
-it for the simulated hardware and opens the main window. Press **Load Test**, then **▶ Start**, to play a match.
+it for the simulated hardware and opens the main window. Press **Load test**, then **Start**, to play a match.
 
 The step-by-step version, with what you should see at each step, is in
 [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).

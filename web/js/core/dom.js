@@ -124,6 +124,42 @@ export function toast(text, kind = "info", ms = 4000) {
   setTimeout(() => el.remove(), ms);
 }
 
+// In-app dialogs, instead of the browser's prompt() and confirm(), which look out of place in the app window.
+function dialog(title, { message = "", input = null, okLabel = "OK", danger = false }) {
+  return new Promise((resolve) => {
+    const ok = h("button.btn", { class: danger ? "danger" : "primary", onclick: () => close(true) }, okLabel);
+    const close = (accepted) => {
+      overlay.remove();
+      document.removeEventListener("keydown", onKey, true);
+      resolve(accepted);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") { e.stopPropagation(); close(false); }
+      if (e.key === "Enter" && (!input || e.ctrlKey || e.metaKey)) { e.preventDefault(); close(true); }
+    };
+    const overlay = h("div.dialog-overlay", { onmousedown: (e) => { if (e.target === overlay) close(false); } },
+      h("div.dialog", { role: "dialog", "aria-modal": "true", "aria-label": title },
+        h("h2", title),
+        message ? h("p.dialog-message", message) : null,
+        input,
+        h("div.dialog-actions", h("button.btn.ghost", { onclick: () => close(false) }, "Cancel"), ok)));
+    document.addEventListener("keydown", onKey, true);
+    document.body.appendChild(overlay);
+    (input || ok).focus();
+  });
+}
+
+/** Asks for some text; resolves to it, or null when cancelled. */
+export async function ask(title, { message = "", placeholder = "", okLabel = "OK" } = {}) {
+  const input = h("textarea.dialog-input", { rows: 3, placeholder, "aria-label": title });
+  return (await dialog(title, { message, input, okLabel })) ? input.value : null;
+}
+
+/** Asks to go ahead with an action; resolves to true or false. danger styles the button for destructive actions. */
+export function confirmAction(title, { message = "", okLabel = "OK", danger = false } = {}) {
+  return dialog(title, { message, okLabel, danger });
+}
+
 export function fmtTime(date) {
   const d = new Date(date);
   return d.toLocaleTimeString([], { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0").slice(0, 1);

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Agame7k/freezy-sim/internal/arena"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 // Match-flow friction: the problems that hold a real field up before a match even starts. A team is still walking
@@ -152,7 +153,7 @@ func (chaos *Chaos) applyFriction(generation int, kind, station string, load are
 	if chaos.friction.generation == generation {
 		chaos.friction.undo = append(chaos.friction.undo, func() { chaos.markAbsent(station, ""); undo() })
 	} else {
-		go undo() // another match loaded while this was being set up
+		safe.Async(chaos.hub, "chaos", undo) // another match loaded while this was being set up
 	}
 	chaos.history = append(chaos.history, Record{Time: time.Now(), At: -1, Type: kind, Station: station, Team: team, Text: text})
 	chaos.mu.Unlock()

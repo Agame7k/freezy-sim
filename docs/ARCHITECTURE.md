@@ -86,13 +86,15 @@ web/
   index.html, ds.html     the main window; the mock driver station screen
   assets.go               go:embed of everything the exe serves
   css/                    styles
+  img/icon.svg            the app icon (window, favicon, top bar)
   layouts/field-2026.json the field layout, shared with the Go physics
   models/human.fbx        the people (CC0); the field CAD is imported at run time, not embedded
   vendor/three/           three.js r170 and the addons used (MIT)
   js/main.js              boots the store, the dock, the venue and the panels
-  js/core/                store.js (websocket client, topics, commands), dom.js (tiny h() helper), match clock,
+  js/core/                store.js (websocket client, topics, commands), dom.js (tiny h() helper, toasts, dialogs),
+                          icons.js (the SVG icon set), match clock,
                           display URLs, pop-out windows
-  js/ui/                  the dock, the top bar, the ticker
+  js/ui/                  the dock, the top bar, the ticker, viewer mode
   js/panels/              one module per panel, each calling registerPanel()
   js/scene/               the three.js venue: field, robots, FUEL, LEDs, devices, people, cameras, quality, replay
 ```

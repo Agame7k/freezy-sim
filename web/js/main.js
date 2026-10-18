@@ -4,6 +4,7 @@ import { toast } from "./core/dom.js";
 import { mountMatchbar } from "./ui/matchbar.js";
 import { mountDock, setupResizer } from "./ui/dock.js";
 import { mountTicker } from "./ui/ticker.js";
+import { enterViewer, viewerVenueReady } from "./ui/viewer.js";
 
 // Panels register themselves with the dock on import (tab order follows import order).
 import "./panels/match.js";
@@ -43,12 +44,14 @@ if (standalonePanel) {
   mountDock(document.getElementById("dock"));
   setupResizer(document.getElementById("dock-resizer"), document.getElementById("workspace"));
   mountTicker(document.getElementById("ticker"));
+  if (params.get("view") === "viewer") enterViewer(); // a spectator link: just the match
   import("./scene/venue.js")
     .then(({ createVenue }) => createVenue({
       host: document.getElementById("scene-host"),
       cssHost: document.getElementById("css3d-host"),
       hud: document.getElementById("hud"),
     }))
+    .then((venue) => viewerVenueReady(venue))
     .catch((err) => {
       console.error(err);
       document.getElementById("scene-host").innerHTML =

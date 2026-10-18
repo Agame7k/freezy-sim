@@ -277,6 +277,10 @@ type APState struct {
 
 func (ap *AccessPoint) state() APState {
 	statuses := ap.stationStatuses()
+	for _, status := range statuses {
+		// The arena needs the salted key hash from the status API; the published state (recorded, shown in the GUI) doesn't.
+		status.HashedWpaKey, status.WpaKeySalt = "", ""
+	}
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 	ssids := map[string]string{}

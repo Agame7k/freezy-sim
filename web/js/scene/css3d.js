@@ -3,7 +3,8 @@
 // still gets occluded correctly by anything in front of it.
 import * as THREE from "three";
 import { CSS3DRenderer, CSS3DObject } from "three/addons/renderers/CSS3DRenderer.js";
-import { h } from "../core/dom.js";
+import { h, replace } from "../core/dom.js";
+import { icon } from "../core/icons.js";
 import { displayById, displayUrl, SCREEN_DISPLAYS } from "../core/displays.js";
 import { on } from "../core/store.js";
 
@@ -57,7 +58,7 @@ export function setupLiveScreens(venue) {
     // Live pages are attached on demand (see the screen budget in afterRender); turning the feature off drops them all.
     if (!enabled) for (const screen of screens) detach(screen);
     button.classList.toggle("active", enabled);
-    button.textContent = enabled ? "📺 Live screens on" : "📺 Live screens off";
+    replace(button, icon("tv", 13), enabled ? "Live screens on" : "Live screens off");
   }
 
   const button = h("button.btn.sm", {

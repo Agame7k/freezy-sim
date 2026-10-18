@@ -38,7 +38,7 @@ The sim saves a bundle automatically when:
 - the event director logs an anomaly
 
 Automatic bundles are rate-limited to one every 2 minutes and at most 10 per run, so a run that keeps failing can't fill
-the disk. You can also save one at any time with the 🐞 **Report** button in the top bar, which asks what went wrong.
+the disk. You can also save one at any time with the **Report** button in the top bar, which asks what went wrong.
 
 | File in the zip | What it is |
 |---|---|
@@ -52,8 +52,10 @@ the disk. You can also save one at any time with the 🐞 **Report** button in t
 | `config.json` | The sim's config, with every password and token removed. Access tokens are also scrubbed from the logs |
 
 **When you file an issue, attach the bundle.** It usually has everything needed to reproduce the problem. Check it
-first if your event data is private: `arena/event.db` holds the sandbox arena's teams, schedule and results. That is
-normally only test data, but an arena you seeded with a real event's teams will have them.
+first if your event data is private: `arena/event.db` holds the sandbox arena's teams (with their Wi-Fi keys), schedule
+and results. That is normally only test data, but an arena you seeded with a real event's teams will have them. Wi-Fi
+keys, passwords and tokens are blanked everywhere else in the bundle: in `config.json`, in `topics.json` and in the
+black box (the arena's messages are cleaned before the sim publishes or records them).
 
 ### Reproducing an AI match
 
@@ -77,3 +79,7 @@ decisions again ([SIMULATION.md](SIMULATION.md#time-and-determinism)).
 
 The format is internal and may change between versions. A recording made by one version is not guaranteed to open in
 another.
+
+Recordings are written to a temporary file and renamed into place, so a crash while saving never leaves a truncated
+`.fsr`. A damaged or foreign file is refused with an error in the Replay panel and doesn't affect the running sim.
+(In 0.1.0, a damaged file could crash the sim.)

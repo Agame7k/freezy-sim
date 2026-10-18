@@ -12,6 +12,8 @@ import (
 	"unsafe"
 
 	win "golang.org/x/sys/windows"
+
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 var (
@@ -146,7 +148,7 @@ func savePlacements() {
 	data, _ := json.MarshalIndent(placements, "", "  ")
 	placementsMu.Unlock()
 	_ = os.MkdirAll(filepath.Dir(placementsPath()), 0o755)
-	_ = os.WriteFile(placementsPath(), data, 0o644)
+	_ = safe.WriteFile(placementsPath(), data, 0o644)
 }
 
 // restorePlacement puts a window back where it was last time (if that spot is still on a connected monitor).

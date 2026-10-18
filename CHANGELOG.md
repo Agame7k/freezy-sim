@@ -4,6 +4,89 @@ All notable changes to Freezy Sim are listed here. The format follows [Keep a Ch
 and versions follow [Semantic Versioning](https://semver.org/). Before 1.0, a minor version (0.x) may change the config,
 the scenario format or the recording format.
 
+## [Unreleased]
+
+### Added
+- First-run setup without editing JSON. The sim looks for the arena folder next to itself and in the usual places
+  (home, Documents, Desktop, Downloads, `source`, `code`, GitHub, OneDrive) and uses it if it finds exactly one.
+  Otherwise the Arena panel offers the folders it found, a folder picker and a path box. The choice is saved to
+  `freezy-sim.json`, and **Change arena folder…** switches it later.
+- A banner for an arena that never started, such as a missing arena folder or a failed build, with a button that
+  opens the fix. Before, only a lost connection got a banner, so a first run that failed showed nothing.
+- Startup warnings for misspelled config keys, which were ignored silently before.
+- Fuzz tests for the FMS UDP/TCP packets, Modbus requests, sACN datagrams and recording files. CI fuzzes each for 15 s.
+- The app icon in the top bar and as the favicon of the GUI and the mock driver station.
+- **Viewer mode**: the match as a spectator sees it. Open it with the **Viewer** button or a `?view=viewer` link.
+  - The panels and tools are hidden; the auto-broadcast camera fills the window.
+  - The arena's own audience overlay is keyed over the picture, using its real audience display with a transparent
+    background, so it always matches the arena.
+  - **Simple** switches to the sim's own score bug, with "Up next" and result cards.
+  - A control strip that hides itself offers Auto, Wide, Overhead and end cameras, Full screen (**F**) and Exit
+    (**Esc**).
+
+### Changed
+- The auto-broadcast director is smarter:
+  - Before a match it shows the venue, then introduces the red and the blue alliance. After the match it shows the
+    final score.
+  - Wide shots are framed to fit every robot. Before, a low shot of the middle of the field could show only the FUEL.
+  - It covers robots battling for position and calls out an alliance on a scoring run ("Red on a 21-point run").
+  - It shares airtime: a robot that just had the camera waits its turn, and one nobody has seen for a while gets a
+    look. A long shot moves on to the next best play instead of holding on the same robot.
+- A visual pass over the GUI:
+  - The 14 dock tabs, which wrapped into three ragged rows, are now four groups (**Match**, **Field**, **Simulation**,
+    **System**), each with one row of panels. A group remembers its last panel and shows a dot when one of its panels
+    has a count to look at (start blockers, problems, fouls, faults).
+  - Emoji and symbol characters (🐞 📺 👁 🎮 🎥 ⚙ ▶ ■ ⧉ ✕) are replaced by one set of line icons that looks the same
+    on every PC.
+  - Buttons are calmer. Only the main action is filled, and destructive ones are tinted rather than bright.
+  - Dropdowns, checkboxes, text boxes, scrollbars, focus rings, cards, tables, toasts and the 3D overlay buttons got
+    a consistent style.
+  - Hint text has more contrast.
+- The browser's own `prompt()` and `confirm()` boxes are replaced by in-app dialogs (Report, Rebuild, Reset learning,
+  Forget, Delete recording). Each says what will happen and whether it can be undone.
+- The footer ticker no longer shows the arena's own console warnings (such as "Arena loop iteration took a long
+  time") or field I/O value changes. Both are still in the Log panel.
+- Controls inside a card heading no longer inherit its small caps ("QUALIFICATIONS"). The event director's controls
+  have their own row, and its match limit is labeled. Wide tables scroll sideways instead of squeezing every cell
+  into a column of single words.
+- The screenshots in `docs/images` show the new GUI. That covers the venue, the graphics menu and ten panels,
+  captured mid-match on the official field CAD.
+- Config errors give the line and column. For a single backslash in a Windows path, the error says how to write it.
+  A wrong type names the setting and what it should be. A Notepad byte-order mark no longer breaks the file.
+- Error messages about the arena folder show paths as typed (no doubled backslashes). They also say when you chose
+  the folder around the arena, or left the example placeholder in place.
+- A crash that repeats is reported once every 30 s, with a count of the repeats, instead of filling the event log
+  120 times a second.
+
+### Fixed
+- Team Wi-Fi keys no longer leak into the bus. The arena sends each team's Wi-Fi key in its match-load and status
+  messages, and the sim republished them as topics, so the keys reached every GUI client, match recordings, the black
+  box and bug bundles.
+  - Arena messages are now cleaned before they are published: any field named like a Wi-Fi key, password, token or
+    secret is blanked. Bug bundles run the same pass over their topic dump.
+  - The network panel's published state no longer carries the salted key hashes. The arena's AP status API still
+    returns them.
+  - Robots still link with network security on, because the emulated AP gets its keys from the arena's own
+    configuration requests.
+  - Recordings and bundles made before this fix still contain the keys. The bundle's copy of the sandbox arena
+    database (`arena/event.db`) holds them by design.
+- The **Audience** camera was inside the crowd, showing the backs of spectators' heads. It is now high above the back
+  rows of the stands, in front of the screen behind them, and shows the whole field.
+- In a narrow window, such as a popped-out panel, the top bar no longer stretches the page, which pushed panel
+  content off the right edge. It scrolls sideways instead, and pop-outs hide the brand text.
+- The Inspector's millisecond timestamps no longer wrap their last digit onto a second line under every packet.
+- A panic in a background goroutine no longer takes down the sim and the arena with it. This covers the arena client,
+  driver-station sockets, the Modbus PLC, network emulators, recorder, replay, launcher, chaos, FTA, referee, director,
+  training and the world loop. Loops restart themselves, one-shot work is logged and dropped, and a panicking bus
+  listener no longer breaks publishing for everyone else.
+- A damaged recording (`.fsr`) could crash the sim on load: a negative entry count panicked, and a huge one could
+  exhaust memory. Chunk sizes and counts are now bounded.
+- A damaged `run/state.json` was overwritten on the next save, losing every team's learned history. It is now moved
+  aside to `state.json.corrupt-<time>` first.
+- `freezy-sim.json`, the head referee's ledger, window placements, the AI bench baseline and recordings are saved
+  atomically, through a temporary file and a rename. A crash or power cut mid-save no longer leaves a truncated file.
+  The rename is retried when antivirus or OneDrive briefly holds the file open.
+
 ## [0.1.0] - 2026-10-17
 
 The first public release.

@@ -2,10 +2,22 @@
 
 The sim reads `freezy-sim.json` from its folder, or another file given with `-config`. Every key is optional: the file
 is layered over the defaults, so it only needs what you change. Start from
-[`config.example.json`](../config.example.json). If there is no file at all, the sim starts with the defaults and
-tells you to create one, because `arena.sourceDir` has no default.
+[`config.example.json`](../config.example.json). If there is no file at all, the sim starts with the defaults. Since
+`arena.sourceDir` has no default, it then looks for an arena folder in the usual places and uses it if it finds exactly
+one; otherwise it asks you to choose one in the GUI ([GETTING_STARTED.md](GETTING_STARTED.md#4-configure)).
 
-The file is read once at startup, so restart the sim after editing it. The sim never writes this file.
+The file is read once at startup, so restart the sim after editing it. The sim writes the file only to save
+`arena.sourceDir`, when it finds the arena on the first run or when you choose a folder in the GUI. It then saves the
+whole config, with your settings kept.
+
+When the file is loaded:
+
+- A Notepad byte-order mark at the start is ignored.
+- If the file isn't valid JSON, the error gives the line and column. A single backslash in a Windows path
+  (`"C:\arena"`) is the usual cause, so the error says so: write `"C:/arena"` or `"C:\\arena"`.
+- A setting with the wrong type (`"port": "8090"` instead of `8090`) is named in the error.
+- A key the sim doesn't know, usually a misspelling, is ignored with a warning in the event log, so you can see
+  why a setting had no effect. Key names are not case-sensitive.
 
 ## Example setups
 

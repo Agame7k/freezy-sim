@@ -4,6 +4,7 @@ package safe
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -17,8 +18,9 @@ import (
 var Dir = filepath.Join("run", "logs")
 
 var (
-	mu       sync.Mutex
-	lastDump = map[string]time.Time{}
+	mu         sync.Mutex
+	lastDump   = map[string]time.Time{}
+	suppressed = map[string]int{}
 )
 
 // Recover must be deferred directly; it reports and swallows a panic. It returns nothing so it can be deferred.
@@ -28,30 +30,36 @@ func Recover(hub *bus.Hub, source string) {
 	}
 }
 
-// Report logs a recovered panic and writes its stack (at most one file per source every 30 s, so a panic in a 120 Hz
-// loop cannot fill the disk).
+// Report logs a recovered panic and writes its stack. Each source reports at most once every 30 s (one stack file,
+// one event, with a count of the repeats in between), so a panic in a 120 Hz loop cannot fill the disk or bury the
+// event log.
 func Report(hub *bus.Hub, source string, value any, stack []byte) {
 	mu.Lock()
-	dump := time.Since(lastDump[source]) > 30*time.Second
-	if dump {
+	report := time.Since(lastDump[source]) > 30*time.Second
+	repeats := suppressed[source]
+	if report {
 		lastDump[source] = time.Now()
+		suppressed[source] = 0
+	} else {
+		suppressed[source]++
 	}
 	mu.Unlock()
-	path := ""
-	if dump {
-		path = filepath.Join(Dir, fmt.Sprintf("panic-%s-%s.txt", source, time.Now().Format("20060102-150405")))
-		if err := os.MkdirAll(Dir, 0o755); err == nil {
-			_ = os.WriteFile(path, []byte(fmt.Sprintf("panic in %s: %v\n\n%s", source, value, stack)), 0o644)
-		}
-	}
-	if hub == nil {
+	if !report {
 		return
 	}
-	if path != "" {
-		hub.Errorf(source, "Recovered from a crash: %v (stack written to %s)", value, path)
-	} else {
-		hub.Errorf(source, "Recovered from a crash: %v", value)
+	path := filepath.Join(Dir, fmt.Sprintf("panic-%s-%s.txt", source, time.Now().Format("20060102-150405")))
+	if err := os.MkdirAll(Dir, 0o755); err == nil {
+		_ = os.WriteFile(path, []byte(fmt.Sprintf("panic in %s: %v\n\n%s", source, value, stack)), 0o644)
 	}
+	message := fmt.Sprintf("Recovered from a crash: %v (stack written to %s)", value, path)
+	if repeats > 0 {
+		message += fmt.Sprintf("; %d more crash(es) since the last report", repeats)
+	}
+	if hub == nil {
+		log.Printf("[ERROR] %s: %s", source, message)
+		return
+	}
+	hub.Errorf(source, "%s", message)
 }
 
 // Go runs fn in a goroutine and restarts it (after a short pause) if it panics, so a bug in one subsystem does not
@@ -64,6 +72,15 @@ func Go(hub *bus.Hub, source string, fn func()) {
 			}
 			time.Sleep(time.Second)
 		}
+	}()
+}
+
+// Async runs fn once in a goroutine; a panic is reported and the goroutine ends (use Go for loops that must keep
+// running, Async for one-shot work that must not be repeated).
+func Async(hub *bus.Hub, source string, fn func()) {
+	go func() {
+		defer Recover(hub, source)
+		fn()
 	}()
 }
 

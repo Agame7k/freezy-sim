@@ -7,10 +7,17 @@ sandbox arena's state and its own log. Most problems are explained there in plai
 
 | Symptom | Fix |
 |---|---|
-| "no freezy-sim.json yet: copy config.example.json…" | Copy `config.example.json` to `freezy-sim.json` in the sim folder and set `arena.sourceDir` ([GETTING_STARTED.md](GETTING_STARTED.md#4-configure)) |
-| "arena.sourceDir is not set" | Set `arena.sourceDir` to your arena folder |
-| "arena folder … not found" | The path is wrong. Use forward slashes (`C:/code/freezy-arena`) or doubled backslashes (`C:\\code\\freezy-arena`) |
-| "does not look like a Freezy Arena or Cheesy Arena folder" | Point `arena.sourceDir` at the folder that holds the arena's `go.mod`, not its parent or a subfolder |
+| Red banner "Freezy Sim needs to know where your Freezy Arena (or Cheesy Arena) folder is" | The sim found no arena folder, or more than one. Press **Choose arena folder**, then **Use this one** next to a folder it found, **Browse for the folder…**, or paste the path. Pick the folder with `go.mod` in it ([GETTING_STARTED.md](GETTING_STARTED.md#4-configure)) |
+| "no arena folder chosen yet" | As above. Or set `arena.sourceDir` in `freezy-sim.json` |
+| "arena.sourceDir is still the example placeholder" | You copied `config.example.json` but didn't change `C:/path/to/freezy-arena`. Choose the folder in the GUI, or edit the file |
+| "arena folder … not found" | The path is wrong, or the folder was moved. Choose it again in the Arena panel (**Change arena folder…**) |
+| "… is the folder around the arena; choose … instead" | You picked the folder above the arena, such as where a zip was extracted. Pick the folder the message names |
+| "does not look like a Freezy Arena or Cheesy Arena folder" | Pick the folder that holds the arena's `go.mod`, not its parent or a subfolder |
+| "freezy-sim.json is not valid JSON at line N, column M" | Open the file and look at that line. The message says the likely cause: a single backslash in a Windows path (write `C:/arena` or `C:\\arena`), a missing comma or quote, or an extra comma before `}` |
+| "the setting "gui.port" should be a number (no quotes), not a string" | Remove the quotes around the number (`"port": 8090`) |
+| Warning "has a setting the simulator does not know, … so it is ignored" | A misspelled key. Check it against [CONFIGURATION.md](CONFIGURATION.md) |
+| Warning "Could not read saved robot designs (starting fresh) … kept as run/state.json.corrupt-…" | `run/state.json` was damaged (often by a crash or power cut during a save in an old version). The sim moved it aside and started fresh; the AI relearns over a few matches. Send the `.corrupt-` file with a bug report if it keeps happening |
+| An error event "Recovered from a crash: … (stack written to run/logs/panic-….txt)" | A bug in the sim. The affected part kept running or restarted itself. Please open an issue with that file (or press 🐞 **Report** for a bundle). A crash that repeats is reported once every 30 s, with a count |
 | "Go is not installed or not on PATH" | Install Go from [go.dev/dl](https://go.dev/dl/), then open a new terminal so the PATH updates. Or put a prebuilt `cheesy-arena.exe` in the arena folder |
 | The arena build fails | The Arena panel shows the compiler output. The first build downloads the arena's Go modules, so it needs internet once. Check that the arena builds on its own with `go build` in its folder |
 | Template errors such as "can't evaluate field … in type" | The sim fell back to an **old prebuilt** `cheesy-arena.exe` in your arena folder that doesn't match the arena's current templates. Fix the build (install Go) or delete the stale exe |
@@ -26,13 +33,15 @@ sandbox arena's state and its own log. Most problems are explained there in plai
 
 | Symptom | Fix |
 |---|---|
+| Viewer mode shows the last match's final score over everything | That is the arena's audience display on its score screen, which is full-screen by design. Change it on the arena's Audience Display controls, or pick **Simple** in the viewer's control strip (move the mouse) |
+| Viewer mode shows no score at all | The arena's audience display is blank, or the arena has no audience overlay. Pick **Simple** in the viewer's control strip |
 | The field never becomes ready | Hover over **Field Ready** in the top bar, or look at the Match panel's blockers. The FTA in the **Officials** panel lists what it is waiting for. For unattended runs, enable its **auto-bypass** |
 | Driver stations don't connect | Check the **Driver Stations** panel: DS on, Ethernet in, radio linked. With network security on, the **Network** panel shows whether the AP is broadcasting that team's SSID. A team that isn't in the loaded match is rejected, as at an event |
 | Robots don't move in auto | Check that they are enabled (the DS panel), and that the AI isn't parked: a test may have put robots in manual |
 | The score check (arena-diff) fails | Open the bundle the sim saved. `events.log` shows which FUEL or climb the arena credited differently, and the seed reproduces the match ([RECORDINGS.md](RECORDINGS.md)) |
 | The sandbox database is in a strange state | Arena panel → **Stop** → **Reset database** → **Start**. Your real arena folder is never touched |
 | Matches are slow to cycle | That's the real-time arena clock, plus the field crew resetting the field. A qualification cycle is about 5–7 minutes |
-| The 3D view is choppy | Click **⚙** in the 3D view and choose a lower preset, or the simple field model. Close popped-out display windows you aren't using |
+| The 3D view is choppy | Click the graphics button at the top right of the 3D view (it shows the preset, such as **High**) and choose a lower preset, or the simple field model. Close popped-out display windows you aren't using |
 | A gamepad does nothing | Press any button on it once with the window focused: browsers only report a gamepad after it is used |
 | The official field model doesn't show | See [FIELD_MODEL.md](FIELD_MODEL.md#troubleshooting) |
 

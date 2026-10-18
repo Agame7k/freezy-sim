@@ -184,4 +184,5 @@ The sim's own unit tests are plain Go tests and need no arena:
 go test ./...
 ```
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for the rest.
+The packet and file parsers also have fuzz tests, and CI fuzzes each one briefly on every push. See
+[DEVELOPMENT.md](DEVELOPMENT.md#checks) for those and the rest.

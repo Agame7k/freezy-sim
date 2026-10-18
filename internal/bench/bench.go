@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Agame7k/freezy-sim/internal/safe"
 	"github.com/Agame7k/freezy-sim/internal/world"
 )
 
@@ -39,7 +40,7 @@ func Run(layout *world.Layout, options world.BenchOptions, dir string, saveBasel
 		}
 	}
 	if saveBaseline {
-		if err := os.WriteFile(filepath.Join(dir, BaselineFile), data, 0o644); err != nil {
+		if err := safe.WriteFile(filepath.Join(dir, BaselineFile), data, 0o644); err != nil {
 			return report, "", err
 		}
 	}

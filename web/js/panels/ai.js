@@ -1,7 +1,7 @@
 // AI panel: what every drive team is thinking (its job, the options it weighed, its target), its shot timing record and
 // endgame decision, the alliance coaches' calls, the human players, and the AI settings (difficulty, sight,
 // personalities, learning).
-import { h, replace, tag, toast } from "../core/dom.js";
+import { h, replace, tag, toast, confirmAction } from "../core/dom.js";
 import { on, cmd } from "../core/store.js";
 import { registerPanel } from "../ui/dock.js";
 import { setAiOverlay, aiOverlayEnabled } from "../scene/aioverlay.js";
@@ -74,7 +74,7 @@ registerPanel({
           h("label.check", { title: "Teams pick their own parts (drive, shooter, hopper, intake, climber) and may rework one in the pits between matches. Off: every team gets a stock design from its team number." },
             h("input", { type: "checkbox", checked: ai.teamDesigns, onchange: (e) => run("world.ai.settings", { teamDesigns: e.target.checked }) }),
             "Teams build their own robots")),
-        teams.length ? h("table.tbl",
+        teams.length ? h("table.tbl.wide",
           h("tr", h("th", "Team"), h("th", "Robot"), h("th", "Why"), h("th", { title: "Matches since the last pit change" }, "Since"),
             h("th", "Last pit change"), h("th", { title: "Locked designs are never changed by the team" }, "Locked"), h("th", "")),
           teams.slice(0, 40).map((t) => h("tr",
@@ -87,7 +87,7 @@ registerPanel({
             h("td", h("input", { type: "checkbox", checked: t.design.locked,
               onchange: (e) => run("world.ai.lockDesign", { team: t.team, lock: e.target.checked }) })),
             h("td", h("button.btn.sm", { title: "Throw the robot out and run a new build season for this team",
-              onclick: () => confirm(`Have ${t.team} build a new robot?`) && run("world.ai.redesign", { team: t.team }) }, "Rebuild"))))) :
+              onclick: async () => (await confirmAction(`Rebuild ${t.team}'s robot?`, { message: "The team throws its robot out and runs a new build season, choosing its parts again.", okLabel: "Rebuild" })) && run("world.ai.redesign", { team: t.team }) }, "Rebuild"))))) :
           h("div.hint", ai.teamDesigns ? "Teams build their robots when they first arrive at the event." :
             "Every team plays a stock design picked from its team number."));
     }
@@ -189,7 +189,7 @@ registerPanel({
 
       replace(learnCard,
         h("h3", "What teams have learned", h("span.grow"),
-          h("button.btn.sm", { onclick: () => confirm("Forget everything the teams have learned?") && run("world.ai.resetLearning") }, "Reset learning")),
+          h("button.btn.sm", { onclick: async () => (await confirmAction("Reset what every team has learned?", { message: "Every team forgets its autonomous routines, shot ranges, habits and match history, and starts learning again from scratch. This can't be undone.", okLabel: "Reset learning", danger: true })) && run("world.ai.resetLearning") }, "Reset learning")),
         ai.learned && ai.learned.length ? h("table.tbl",
           h("tr", h("th", "Team"), h("th", "Matches"), h("th", "Accuracy"), h("th", "Climbs"), h("th", "Timed shots"),
             h("th", "Risk shift"), h("th", "Practice"), h("th", { title: "Build quality plus what the pit crew has fixed" }, "Reliability"),
@@ -203,7 +203,7 @@ registerPanel({
             h("td.small", bestChoices(t)),
             h("td.small", memories(t)),
             h("td", h("button.btn.sm", { title: "This team forgets its records, mistakes and auto routines",
-              onclick: () => confirm(`Make ${t.team} forget what it has learned?`) && run("world.ai.forgetTeam", { team: t.team }) }, "Forget"))))) :
+              onclick: async () => (await confirmAction(`Make ${t.team} forget what it has learned?`, { message: "This team starts learning again from scratch. This can't be undone.", okLabel: "Forget", danger: true })) && run("world.ai.forgetTeam", { team: t.team }) }, "Forget"))))) :
           h("div.hint", "Teams learn from every completed match: bolder or more careful shot timing, driver practice, which game plans, autos, shot ranges and roles work, and the mistakes they made."));
 
       function renderPersonality() {

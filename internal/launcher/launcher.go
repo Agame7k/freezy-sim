@@ -6,6 +6,7 @@ package launcher
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/Agame7k/freezy-sim/internal/bus"
 	"github.com/Agame7k/freezy-sim/internal/config"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 const exeName = "cheesy-arena.exe"
@@ -45,6 +47,10 @@ type Status struct {
 	Mode       string    `json:"mode"`
 	Ref        string    `json:"ref,omitempty"`    // arena git ref being built (ref.go); "" = the arena folder as it is
 	Commit     string    `json:"commit,omitempty"` // the commit that ref resolved to
+	// NeedsSource: the arena folder is missing or wrong and the user must choose one; Suggestions are arena folders
+	// found in the usual places.
+	NeedsSource bool     `json:"needsSource,omitempty"`
+	Suggestions []string `json:"suggestions,omitempty"`
 }
 
 type Launcher struct {
@@ -74,6 +80,7 @@ func New(cfg *config.Config, hub *bus.Hub) *Launcher {
 	hub.Handle("arena.stop", func(_ []byte) (any, error) { return nil, launcher.Stop() })
 	hub.Handle("arena.restart", func(_ []byte) (any, error) {
 		go func() {
+			defer safe.Recover(launcher.hub, "launcher")
 			_ = launcher.Stop()
 			launcher.Start()
 		}()
@@ -81,6 +88,7 @@ func New(cfg *config.Config, hub *bus.Hub) *Launcher {
 	})
 	hub.Handle("arena.rebuild", func(_ []byte) (any, error) {
 		go func() {
+			defer safe.Recover(launcher.hub, "launcher")
 			_ = launcher.Stop()
 			_ = os.Remove(filepath.Join(launcher.sandboxDir(), exeName))
 			launcher.Start()
@@ -88,6 +96,16 @@ func New(cfg *config.Config, hub *bus.Hub) *Launcher {
 		return nil, nil
 	})
 	hub.Handle("arena.resetDb", func(_ []byte) (any, error) { return nil, launcher.ResetDatabase() })
+	hub.Handle("arena.setSource", func(args []byte) (any, error) {
+		var request struct {
+			Path string `json:"path"`
+		}
+		if err := json.Unmarshal(args, &request); err != nil {
+			return nil, err
+		}
+		return nil, launcher.SetSource(request.Path)
+	})
+	hub.Handle("arena.findSources", func(_ []byte) (any, error) { return FindArenaFolders(), nil })
 	launcher.publish()
 	return launcher
 }
@@ -138,7 +156,7 @@ func (launcher *Launcher) Start() {
 
 	if launcher.cfg.Arena.Mode == config.ArenaExternal {
 		launcher.setState("external", "Attaching to an arena already running at "+launcher.cfg.ArenaURL())
-		go launcher.waitReady()
+		safe.Async(launcher.hub, "launcher", launcher.waitReady)
 		return
 	}
 
@@ -149,7 +167,7 @@ func (launcher *Launcher) Start() {
 		)
 		launcher.hub.Warnf("launcher", "Port %d is already serving an arena; attaching instead of launching",
 			launcher.cfg.Arena.HTTPPort)
-		go launcher.waitReady()
+		safe.Async(launcher.hub, "launcher", launcher.waitReady)
 		return
 	}
 
@@ -166,23 +184,10 @@ func (launcher *Launcher) Start() {
 }
 
 func (launcher *Launcher) prepare() error {
+	if err := launcher.sourceProblem(); err != nil {
+		return err
+	}
 	source := launcher.cfg.Arena.SourceDir
-	configPath := launcher.cfg.Path()
-	if source == "" {
-		if !fileExists(configPath) {
-			return fmt.Errorf("no %s yet: copy config.example.json to %s and set arena.sourceDir to your Freezy Arena "+
-				"or Cheesy Arena folder (docs/GETTING_STARTED.md)", configPath, configPath)
-		}
-		return fmt.Errorf("arena.sourceDir is not set in %s: set it to your Freezy Arena or Cheesy Arena folder "+
-			"(docs/GETTING_STARTED.md)", configPath)
-	}
-	if info, err := os.Stat(source); err != nil || !info.IsDir() {
-		return fmt.Errorf("arena folder %q not found (arena.sourceDir in %s)", source, configPath)
-	}
-	if !fileExists(filepath.Join(source, "go.mod")) && !fileExists(filepath.Join(source, exeName)) {
-		return fmt.Errorf("%q does not look like a Freezy Arena or Cheesy Arena folder (no go.mod or %s in it); "+
-			"arena.sourceDir must be the folder that holds the arena's go.mod", source, exeName)
-	}
 	sandbox := launcher.sandboxDir()
 	if samePath(source, sandbox) || isWithin(sandbox, source) {
 		return fmt.Errorf("refusing to use a sandbox inside the arena source folder (%s)", sandbox)
@@ -325,9 +330,10 @@ func (launcher *Launcher) launch() error {
 	launcher.publish()
 	launcher.hub.Logf("launcher", "Arena started (pid %d) in %s", cmd.Process.Pid, sandbox)
 
-	go launcher.pumpLogs(stdout)
-	go launcher.waitReady()
+	safe.Async(launcher.hub, "launcher", func() { launcher.pumpLogs(stdout) })
+	safe.Async(launcher.hub, "launcher", launcher.waitReady)
 	go func() {
+		defer safe.Recover(launcher.hub, "launcher")
 		err := cmd.Wait()
 		launcher.mu.Lock()
 		exitCode := cmd.ProcessState.ExitCode()
@@ -372,6 +378,7 @@ func (launcher *Launcher) restartAfterCrash() {
 	}
 	launcher.hub.Warnf("launcher", "Restarting the arena in 2 s (attempt %d of 3)", attempts)
 	go func() {
+		defer safe.Recover(launcher.hub, "launcher")
 		time.Sleep(2 * time.Second)
 		launcher.mu.Lock()
 		stopped := launcher.stopReq

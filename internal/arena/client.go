@@ -15,6 +15,8 @@ import (
 
 	"github.com/Agame7k/freezy-sim/internal/bus"
 	"github.com/Agame7k/freezy-sim/internal/config"
+	"github.com/Agame7k/freezy-sim/internal/redact"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 var errNotConnected = errors.New("not connected to the arena")
@@ -204,14 +206,14 @@ func (client *Client) NewSocket(name, path string, onMessage func(string, json.R
 
 // Run starts the observer sockets.
 func (client *Client) Run() {
-	go client.MatchPlay.Run()
-	go client.Plc.Run()
+	safe.Go(client.hub, "arena", client.MatchPlay.Run)
+	safe.Go(client.hub, "arena", client.Plc.Run)
 	go func() {
 		for range time.Tick(time.Second) {
 			client.hub.Publish("arena.sockets", []SocketStatus{client.MatchPlay.Status(), client.Plc.Status()})
 		}
 	}()
-	go client.pollStackLights()
+	safe.Go(client.hub, "arena", client.pollStackLights)
 }
 
 // pollStackLights mirrors the arena's own team stack light logic (/api/freezy/team_stack_light) for the 3D field.
@@ -339,7 +341,7 @@ func (client *Client) socketStateChanged(name string) func(bool, error) {
 				listeners := append([]func(){}, client.connectListeners...)
 				client.listenerMu.Unlock()
 				for _, listener := range listeners {
-					go listener()
+					safe.Async(client.hub, "arena", listener)
 				}
 			}
 		} else if err != nil {
@@ -355,6 +357,10 @@ func (client *Client) socketStateChanged(name string) func(bool, error) {
 }
 
 func (client *Client) handleMatchPlayMessage(msgType string, data json.RawMessage) {
+	// Arena messages are republished as topics, which go to every GUI client and into recordings and bug bundles, so
+	// secrets in them (each team's Wi-Fi key in matchLoad, for one) are blanked first. Nothing in the sim needs them:
+	// the emulated AP gets its keys from the arena's own configuration requests.
+	data = redact.JSON(data)
 	client.hub.Publish("arena."+msgType, data)
 	switch msgType {
 	case "matchLoad":

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Agame7k/freezy-sim/internal/inspector"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 var (
@@ -59,7 +60,10 @@ func (sw *Switch) start() {
 			if err != nil {
 				return
 			}
-			go sw.serve(conn)
+			go func() {
+				defer safe.Recover(nil, "network")
+				sw.serve(conn)
+			}()
 		}
 	}()
 }

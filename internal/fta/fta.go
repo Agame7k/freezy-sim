@@ -148,7 +148,7 @@ func (fta *FTA) onMatchState(old, new arena.MatchState) {
 	case new == arena.PostMatch && old.InMatch():
 		if fta.settings.ManageReady && !fta.testsRunning() {
 			// The field is not ready for the next match until the FTA has checked it again.
-			go fta.setReady(false)
+			safe.Async(fta.hub, "fta", func() { fta.setReady(false) })
 			fta.ready = false
 		}
 	}
@@ -305,7 +305,7 @@ func (fta *FTA) check() {
 			} else if status.IsFtaReady && fta.ready {
 				fta.note("", "Holding the field: %s", firstOr(blockers, "match not loaded"))
 			}
-			go fta.setReady(ready)
+			safe.Async(fta.hub, "fta", func() { fta.setReady(ready) })
 		}
 		fta.ready = ready
 	}

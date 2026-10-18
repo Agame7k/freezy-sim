@@ -15,10 +15,12 @@ The **top bar** is always visible. It shows:
 - both scores
 - whether the field is ready to start. Hover over it to see what the arena is waiting for
 
-Its buttons are **Load Test**, **▶ Start**, **■ Abort**, **Commit**, and **🐞 Report**, which saves a bug-report bundle
-([RECORDINGS.md](RECORDINGS.md#bug-report-bundles)).
+Its buttons are **Load test**, **Start**, **Abort**, **Commit**, and **Report**, which asks what went wrong and saves a
+bug-report bundle ([RECORDINGS.md](RECORDINGS.md#bug-report-bundles)).
 
-If the sim loses the arena, a banner under the top bar says what is down and what is being done about it.
+If the sim loses the arena, or the arena can't start, a banner under the top bar says what is wrong and what is being
+done about it. When there is something for you to do, such as choosing the arena folder, the banner has a button that
+takes you there.
 
 ### The 3D venue
 
@@ -31,7 +33,7 @@ live:
 
 You can click the E-stop and A-stop buttons on the field to press them.
 
-- **Graphics (⚙, top right).** Quality presets (Low, Medium, High, picked automatically for your GPU the first
+- **Graphics** (top right; the button shows the current preset, such as **High**). Quality presets (Low, Medium, High, picked automatically for your GPU the first
   time), tone mapping, exposure, and the field model.
 - **Field model.** The sim's built field, or FIRST's official field CAD if you have imported it
   ([FIELD_MODEL.md](FIELD_MODEL.md)). The live parts (hub LEDs, chute doors, signs, buttons, screens) are the same
@@ -41,9 +43,13 @@ You can click the E-stop and A-stop buttons on the field to press them.
   the arena reports the field ready.
 - **Winner lights.** When the score is shown, the PLC's winner light show waits for the audience display's winner video
   to reveal the result, then plays on the venue lights in the winner's colors (Freezy Arena).
-- **Broadcast cameras.** A camera director picks angles that can see the action, tracks along rails and reframes,
-  like a broadcast crew. **Broadcast** lays the arena's own audience display over the picture, as a stream would show
-  it.
+- **Broadcast cameras.** **Auto broadcast** is a camera director that works like a broadcast crew. Before a match it
+  shows the venue and introduces each alliance. During the match it cuts between shooting runs, volleys, robots
+  battling for position, defense, PIN counts, foul calls, human-player throws and end-game climbs, and follows an
+  alliance on a scoring run. It shares the airtime between the robots, and its wide shots are framed to fit every
+  robot. Afterwards it shows the final score. It picks angles that can see the action, tracks along rails and
+  reframes. A caption at the bottom says what you are watching. **Broadcast** lays the arena's own audience display
+  over the picture, as a stream would show it. **Audience** is the view from high in the stands.
 
 <p align="center">
   <img src="images/broadcast.gif" alt="The auto broadcast camera following the play" width="560">
@@ -52,9 +58,38 @@ You can click the E-stop and A-stop buttons on the field to press them.
 
 How the robots, FUEL and officials behave is explained in [SIMULATION.md](SIMULATION.md).
 
+### Viewer mode
+
+**Viewer mode** shows the match the way a spectator sees it, without the engineering. Press **Viewer** in the top
+bar, or open the sim's address with `?view=viewer` on the end (for example `http://127.0.0.1:8090/?view=viewer`).
+That link is the one to give spectators on other devices once [remote access](CONFIGURATION.md#remote-access) is on.
+
+In viewer mode:
+
+- The panels, logs, top bar and 3D tool buttons are hidden. The 3D view fills the window on the **Auto broadcast**
+  camera, with its LIVE caption.
+- **The arena's own overlay** is keyed over the picture: the arena's real audience display, loaded with a transparent
+  background. It is exactly what the arena shows on its audience screen (score bar, timer, match intro, final
+  score), and it follows any change you make to the arena. What it shows is up to the arena, as at an event. After a
+  match the arena can keep its full-screen final score up even once the next match is loaded; change it on the
+  arena's Audience Display controls.
+- **Simple** swaps the arena's overlay for the sim's own score bug (team numbers, scores, period, clock and hub
+  shift), with an "Up next" card before a match and the result after it. Use it with an arena that has no audience
+  overlay, or one left blank. The sim remembers your choice.
+- Move the mouse and a control strip appears. Use it to pick a camera (**Auto**, **Wide**, **Overhead**, **Blue
+  end**, **Red end**), switch the overlay, go **Full screen** (or press **F**), or **Exit viewer** (or press
+  **Esc**). After 3 s without mouse movement, the strip and the mouse pointer hide.
+- If the simulator or the arena drops out, a short line under the score says so, instead of a frozen score.
+
+Viewer mode doesn't change the match; the arena keeps running it from the main window or the director.
+
 ### Panels
 
-Panels dock beside the 3D view, or pop out into their own windows. The sim remembers where you put each window.
+Panels dock beside the 3D view, in four groups: **Match** (Match, Match Log, Officials, Replay), **Field** (Driver
+Stations, Robots, Field I/O, Network, Displays), **Simulation** (AI, Chaos) and **System** (Arena, Inspector, Log).
+Pick a group, then a panel; each group remembers the panel you last used, and a dot on a group means one of its
+panels has a count to look at (start blockers, problems, fouls or faults). Any panel can also pop out into its own window (the arrow at its top right). The sim remembers
+where you put each window.
 
 | Panel | Use it to |
 |---|---|
@@ -70,7 +105,7 @@ Panels dock beside the 3D view, or pop out into their own windows. The sim remem
 | **Inspector** | A packet log for every protocol, with filters and timing |
 | **Replay** | Play back match recordings and saved black boxes in 3D ([RECORDINGS.md](RECORDINGS.md)) |
 | **Match Log** | The auto-referee's settings and live log (with buttons to call a foul by hand), plus every saved match report |
-| **Arena** | The sandbox launcher (build, start, stop, restart, reset the database), the arena's log, the "configure arena for sim" settings, port problems, and remote access |
+| **Arena** | The sandbox launcher (build, start, stop, restart, reset the database, choose or change the arena folder), the arena's log, the "configure arena for sim" settings, port problems, and remote access |
 | **Log** | The sim's own event log |
 
 Every driver station has its own card in the **Driver Stations** panel, with the robot behind it. The 🖥 button on a

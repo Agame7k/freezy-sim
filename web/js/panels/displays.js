@@ -3,6 +3,7 @@
 import { h, replace, toast } from "../core/dom.js";
 import { cmd, on } from "../core/store.js";
 import { registerPanel } from "../ui/dock.js";
+import { icon } from "../core/icons.js";
 import { DISPLAYS, displayUrl, openDisplay } from "../core/displays.js";
 
 // A typical event's screens, opened together for "event mode".
@@ -49,8 +50,8 @@ registerPanel({
               }), d.title)),
               h("td.small.muted", d.where),
               h("td", { style: { whiteSpace: "nowrap" } },
-                h("button.btn.sm", { onclick: () => openDisplay(d.id), title: "Open in its own window" }, "⧉ Open"),
-                h("a.btn.sm.ghost", { href: displayUrl(d), target: "_blank", title: "Open in the default browser" }, "↗")),
+                h("button.btn.sm", { onclick: () => openDisplay(d.id), title: "Open in its own window" }, icon("window", 12), "Open"),
+                h("a.btn.sm.ghost", { href: displayUrl(d), target: "_blank", title: "Open in the default browser", "aria-label": "Open in browser" }, icon("external", 12))),
             ))))));
     }
 
@@ -62,7 +63,7 @@ registerPanel({
           style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "8px" },
         }, tiles.map((d) => h("div", { style: { border: "1px solid var(--line)", borderRadius: "6px", overflow: "hidden", background: "#000" } },
           h("div.row.small", { style: { padding: "3px 6px", background: "var(--panel)" } }, h("b", d.title), h("span.grow"),
-            h("button.btn.sm.ghost", { onclick: () => openDisplay(d.id) }, "⧉")),
+            h("button.btn.sm.ghost", { title: "Open in its own window", "aria-label": "Open in its own window", onclick: () => openDisplay(d.id) }, icon("window", 12))),
           h("div", { style: { position: "relative", width: "100%", aspectRatio: "16 / 9", overflow: "hidden" } },
             h("iframe", {
               src: displayUrl(d), loading: "lazy", allow: "autoplay",

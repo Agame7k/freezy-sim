@@ -12,6 +12,7 @@ import { Pass, FullScreenQuad } from "three/addons/postprocessing/Pass.js";
 import { CopyShader } from "three/addons/shaders/CopyShader.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 import { h } from "../core/dom.js";
+import { icon } from "../core/icons.js";
 
 const STORAGE = "freezy-sim.graphics";
 export const PRESETS = {
@@ -239,7 +240,7 @@ export function setupQuality(venue, hud) {
   function renderControls() {
     const children = [
       h("button.btn.sm.ghost", { title: "Graphics quality", onclick: () => { open = !open; renderControls(); } },
-        `⚙ ${PRESETS[settings.preset].label}`),
+        [icon("sliders", 13), PRESETS[settings.preset].label]),
       open ? h("div.hud-graphics-menu",
         h("div.small.muted", "Quality"),
         h("div.row", Object.entries(PRESETS).map(([id, p]) => h(`button.btn.sm${settings.preset === id ? ".primary" : ""}`, {

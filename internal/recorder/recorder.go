@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Agame7k/freezy-sim/internal/bus"
+	"github.com/Agame7k/freezy-sim/internal/safe"
 )
 
 const (
@@ -77,7 +78,7 @@ func recorded(topic string) bool {
 
 // Run starts recording the world stream and sealing chunks.
 func (recorder *Recorder) Run(world Source) {
-	go func() {
+	safe.Go(recorder.hub, "recorder", func() {
 		for {
 			frames, cancel := world.Subscribe()
 			for frame := range frames {
@@ -86,8 +87,8 @@ func (recorder *Recorder) Run(world Source) {
 			cancel()
 			time.Sleep(time.Second)
 		}
-	}()
-	go func() {
+	})
+	safe.Go(recorder.hub, "recorder", func() {
 		for range time.Tick(time.Second) {
 			recorder.mu.Lock()
 			due := time.Since(recorder.openStart) >= chunkLength
@@ -96,12 +97,12 @@ func (recorder *Recorder) Run(world Source) {
 				recorder.seal()
 			}
 		}
-	}()
-	go func() {
+	})
+	safe.Go(recorder.hub, "recorder", func() {
 		for range time.Tick(2 * time.Second) {
 			recorder.publishState()
 		}
-	}()
+	})
 }
 
 func (recorder *Recorder) onTopic(topic string, data json.RawMessage) {
