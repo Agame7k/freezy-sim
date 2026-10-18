@@ -7,9 +7,16 @@ version with `-dev` after it.
 
 ## 1. Before you build
 
-- [ ] `CHANGELOG.md`: the version's heading has today's date instead of "not yet released" (or, for later versions,
-  the "Unreleased" notes have moved under a new version heading). The heading must start `## [0.2.0]`: the Release
-  workflow uses that section as the release notes, and fails if it's missing.
+- [ ] `CHANGELOG.md`: everything in this release is listed under `## [Unreleased]`. You don't need to rename it:
+  when the Release workflow finds no `## [0.2.0]` section, it moves the Unreleased notes under
+  `## [0.2.0] - <today>`, uses them as the release notes, and commits the changelog back to `main` (see
+  [Publish](#6-publish)). To do it yourself instead, for example to pick the date:
+
+  ```bash
+  bash tools/changelog.sh promote 0.2.0
+  ```
+
+  `bash tools/changelog.sh notes 0.2.0` prints what the release notes will be.
 - [ ] Docs: check that the README and `docs/` match what the release does (new flags, config keys, tests).
 - [ ] `git status` shows only what you mean to publish. These must **never** be committed, and `.gitignore` covers them:
   - `freezy-sim.json` (local paths, maybe passwords)
@@ -104,13 +111,19 @@ This checks formatting, vet and tests, then builds a trimmed, stamped exe. It wr
 
 3. The **Release** workflow (Actions tab) then:
    - checks the tag looks like `v1.2.3` or `v1.2.3-rc.1`
-   - takes the `## [1.2.3]` section of `CHANGELOG.md` as the release notes
+   - takes the `## [1.2.3]` section of `CHANGELOG.md` as the release notes. If there is none, it moves the
+     `## [Unreleased]` notes under `## [1.2.3] - <today>` and uses those. It fails only if both are missing or empty
    - runs `release.cmd` (format, vet, tests, build, zip, checksum)
    - creates the GitHub release titled with the tag, and attaches the zip and the `.sha256` file
+   - if it moved the Unreleased notes, commits `CHANGELOG.md` to `main` as "CHANGELOG: release 1.2.3" (by
+     github-actions). It does this only if `main` is still at the tagged commit; if `main` has moved on, its
+     Unreleased section may already hold notes for the next version, so it leaves a warning on the run instead, and
+     you move the notes by hand. Pull afterwards to get the commit.
 
    Every 0.x version, and any tag with a suffix (`v1.2.0-rc.1`), is published as a pre-release; from 1.0 a plain
    version is a normal release.
-4. If the workflow fails, fix the problem, then move the tag and push it again:
+4. If the workflow fails, fix the problem, push the fix, then move the tag to it and push the tag again. (Re-running
+   the failed run doesn't help: a tag's run uses the workflow and files at the tagged commit.)
 
    ```bash
    git tag -f v0.2.0
@@ -131,4 +144,4 @@ This checks formatting, vet and tests, then builds a trimmed, stamped exe. It wr
 ## 7. After
 
 - [ ] Set `internal/version/version.go` to the next version with `-dev`, for example `0.2.0-dev`.
-- [ ] Add a new empty "Unreleased" section to `CHANGELOG.md`.
+- [ ] `git pull` to get the release's changelog commit, which already starts a new, empty "Unreleased" section.

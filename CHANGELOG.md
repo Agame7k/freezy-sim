@@ -25,6 +25,10 @@ the scenario format or the recording format.
     (**Esc**).
 
 ### Changed
+- Releasing no longer needs the changelog edited by hand. When a pushed version tag has no section of its own in
+  `CHANGELOG.md`, the Release workflow moves the "Unreleased" notes under `## [<version>] - <date>` and uses them as
+  the release notes. It then commits the changelog back to `main` (only if `main` is still at the tagged commit).
+  `tools/changelog.sh` does the same by hand (`promote <version>`) and prints a version's notes (`notes <version>`).
 - The auto-broadcast director is smarter:
   - Before a match it shows the venue, then introduces the red and the blue alliance. After the match it shows the
     final score.

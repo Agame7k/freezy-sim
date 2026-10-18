@@ -1,6 +1,7 @@
 # Publishes a GitHub release when a version tag is pushed: git tag v0.2.0 && git push origin v0.2.0
 # It builds the zip with release.cmd (which checks formatting, vet and tests first), takes the release notes from that
-# version's CHANGELOG.md section, and attaches the zip and its .sha256. See docs/RELEASING.md.
+# version's CHANGELOG.md section (or, if there is none, moves the "Unreleased" notes under the version and commits that
+# back to the default branch), and attaches the zip and its .sha256. See docs/RELEASING.md.
 name: Release
 
 on:
@@ -41,20 +42,26 @@ jobs:
           if [[ "$version" == 0.* || "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
 
       - name: Take the release notes from CHANGELOG.md
+        id: notes
         shell: bash
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          # Everything under "## [<version>]" up to the next "## [" heading.
-          awk -v v="$VERSION" '
-            index($0, "## [" v "]") == 1 { found = 1; next }
-            found && /^## \[/ { exit }
-            found { print }
-          ' CHANGELOG.md > release-notes.md
-          if ! grep -q '[^[:space:]]' release-notes.md; then
-            echo "::error::CHANGELOG.md has no \"## [$VERSION]\" section (or it is empty)"
-            exit 1
+          # The notes are the version's own "## [<version>]" section. If it has none yet, the "## [Unreleased]" notes
+          # become it: they move under "## [<version>] - <today>" here (so the zip's CHANGELOG.md has the heading
+          # too), and the change is committed back to the default branch after the release is published.
+          notes="$(bash tools/changelog.sh notes "$VERSION")"
+          if [[ "$notes" =~ [^[:space:]] ]]; then
+            echo "promoted=false" >> "$GITHUB_OUTPUT"
+          else
+            if ! bash tools/changelog.sh promote "$VERSION"; then
+              echo "::error::CHANGELOG.md has no \"## [$VERSION]\" section and nothing under \"## [Unreleased]\" to release"
+              exit 1
+            fi
+            echo "promoted=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Moved the Unreleased notes in CHANGELOG.md under \"## [$VERSION]\""
           fi
+          bash tools/changelog.sh notes "$VERSION" > release-notes.md
           {
             echo
             echo "---"
@@ -83,3 +90,24 @@ jobs:
             --notes-file release-notes.md \
             "${flags[@]}" \
             "dist/$name.zip" "dist/$name.zip.sha256"
+
+      - name: Commit the promoted CHANGELOG.md to the default branch
+        if: steps.notes.outputs.promoted == 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          # Only when the branch is still at the tagged commit: if it has moved on, its Unreleased section may hold
+          # notes for the next version, which must not be filed under this one.
+          git fetch --no-tags origin "$BRANCH"
+          if [ "$(git rev-parse FETCH_HEAD)" != "$GITHUB_SHA" ]; then
+            echo "::warning::$BRANCH has moved on since $GITHUB_REF_NAME, so its CHANGELOG.md still lists these notes under Unreleased. Move the ones that shipped in $VERSION under a \"## [$VERSION]\" heading yourself."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "CHANGELOG: release $VERSION" -- CHANGELOG.md
+          if ! git push origin "HEAD:refs/heads/$BRANCH"; then
+            echo "::warning::Could not push the CHANGELOG.md update to $BRANCH (branch protection?). Run: bash tools/changelog.sh promote $VERSION"
+          fi
