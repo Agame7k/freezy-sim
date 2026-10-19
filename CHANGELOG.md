@@ -6,6 +6,8 @@ the scenario format or the recording format.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-19
+
 ### Added
 - Every button in the GUI says what it does when you hover over it. That covers the Match, Driver Stations, Field
   I/O, Robots, Network, Chaos, Match Log, Replay, Inspector, Log, Arena and AI panels and the graphics menu. Toggles
