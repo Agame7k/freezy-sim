@@ -101,6 +101,7 @@ type State struct {
 	AssignStation  string  `json:"assignStation"`
 	AssignStatus   int     `json:"assignStatus"`
 	AssignText     string  `json:"assignText"`
+	FollowArena    bool    `json:"followArena"`
 	EventName      string  `json:"eventName"`
 	FmsLinked      bool    `json:"fmsLinked"`
 	ControlCount   int     `json:"controlCount"`
@@ -870,7 +871,7 @@ func (station *Station) snapshot(now time.Time) State {
 		TripTimeMs:    station.tripTimeMs, LostPackets: station.lostPackets, StatusSent: station.statusSent,
 		StatusSendErr: errText, TcpState: station.tcpState, TcpError: station.tcpError,
 		AssignStation: station.assignStation, AssignStatus: station.assignStatus, AssignText: station.assignText,
-		EventName: station.eventName, FmsLinked: fmsLinked, ControlCount: station.controlCount,
+		FollowArena: station.followArena, EventName: station.eventName, FmsLinked: fmsLinked, ControlCount: station.controlCount,
 		ControlRateHz: rate, ControlGapMs: gap, MaxControlGap: int(station.maxControlGap.Milliseconds()),
 		GameData: station.gameData, Enabled: station.lastEnabled, Auto: station.lastAuto,
 		EStopped: station.robot.EStopLatched || control.EStop, AStopped: control.AStop, ModeText: mode,

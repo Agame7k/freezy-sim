@@ -11,7 +11,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { Pass, FullScreenQuad } from "three/addons/postprocessing/Pass.js";
 import { CopyShader } from "three/addons/shaders/CopyShader.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
-import { h } from "../core/dom.js";
+import { h, confirmAction } from "../core/dom.js";
 import { icon } from "../core/icons.js";
 
 const STORAGE = "freezy-sim.graphics";
@@ -234,12 +234,18 @@ export function setupQuality(venue, hud) {
         h("button.btn.sm.ghost", { onclick: () => picker.click(), disabled: busy },
           busy ? "Importing…" : status.installed ? "Replace .glb…" : "Import .glb…"),
         status.installed && !busy ? h("button.btn.sm.ghost", { title: `Delete ${status.path}`,
-          onclick: async () => { await venue.removeFieldModel(); renderControls(); } }, "Remove") : null,
+          onclick: async () => {
+            if (!(await confirmAction("Remove the imported field CAD?", { message: `${status.path} is deleted and the simple field is shown. ` +
+              "To get it back, import the .glb again.", okLabel: "Remove", danger: true }))) return;
+            await venue.removeFieldModel();
+            renderControls();
+          } }, "Remove") : null,
         picker));
   }
   function renderControls() {
     const children = [
-      h("button.btn.sm.ghost", { title: "Graphics quality", onclick: () => { open = !open; renderControls(); } },
+      h("button.btn.sm.ghost", { title: "Graphics settings: quality, tone mapping, field model and exposure",
+        "aria-expanded": String(open), onclick: () => { open = !open; renderControls(); } },
         [icon("sliders", 13), PRESETS[settings.preset].label]),
       open ? h("div.hud-graphics-menu",
         h("div.small.muted", "Quality"),

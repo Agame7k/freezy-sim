@@ -95,12 +95,17 @@ export function tag(text, kind = "") {
   return h("span.tag", { class: kind }, text);
 }
 
-/** Button that runs a simulator command and toasts errors. */
-export function cmdButton(label, command, args = {}, cls = "") {
+/**
+ * Button that runs a simulator command and toasts errors. options.title says what it does (shown on hover);
+ * options.confirm ({ title, message, okLabel, danger }) asks first, for actions that can't be undone.
+ */
+export function cmdButton(label, command, args = {}, cls = "", options = {}) {
   return h("button.btn", {
     class: cls,
+    title: options.title,
     onclick: async (e) => {
       const button = e.currentTarget;
+      if (options.confirm && !(await confirmAction(options.confirm.title, options.confirm))) return;
       button.disabled = true;
       try {
         await cmd(command, typeof args === "function" ? args() : args);

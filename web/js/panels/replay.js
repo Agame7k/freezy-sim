@@ -14,14 +14,16 @@ const clock = (seconds) => fmtClock(Math.max(0, seconds));
 function createTransport(cls) {
   let state = null;
   let scrubbing = false;
-  const play = h("button.btn.sm", { "aria-label": "Play", onclick: () => run(state?.playing ? "replay.pause" : "replay.play") }, icon("play"));
-  const back = h("button.btn.sm", { title: "Back 5 s", onclick: () => run("replay.seek", { position: state.position - 5 }) }, "−5s");
-  const forward = h("button.btn.sm", { title: "Forward 5 s", onclick: () => run("replay.seek", { position: state.position + 5 }) }, "+5s");
-  const scrubber = h("input", { type: "range", min: 0, max: 1, step: 0.1, value: 0, style: { flex: "1", minWidth: "80px" } });
+  const play = h("button.btn.sm", { title: "Play", "aria-label": "Play", onclick: () => run(state?.playing ? "replay.pause" : "replay.play") }, icon("play"));
+  const back = h("button.btn.sm", { title: "Back 5 s", onclick: () => state && run("replay.seek", { position: Math.max(0, state.position - 5) }) }, "−5s");
+  const forward = h("button.btn.sm", { title: "Forward 5 s",
+    onclick: () => state && run("replay.seek", { position: Math.min(state.duration, state.position + 5) }) }, "+5s");
+  const scrubber = h("input", { type: "range", min: 0, max: 1, step: 0.1, value: 0, style: { flex: "1", minWidth: "80px" },
+    title: "Drag to jump to any point in the recording", "aria-label": "Replay position" });
   scrubber.addEventListener("input", () => { scrubbing = true; time.textContent = `${clock(+scrubber.value)} / ${clock(state?.duration || 0)}`; });
   scrubber.addEventListener("change", () => { scrubbing = false; run("replay.seek", { position: +scrubber.value }); });
   const time = h("span.mono.small", "0:00 / 0:00");
-  const speed = h("select", { onchange: (e) => run("replay.speed", { speed: +e.target.value }) },
+  const speed = h("select", { title: "Playback speed", "aria-label": "Playback speed", onchange: (e) => run("replay.speed", { speed: +e.target.value }) },
     SPEEDS.map((s) => h("option", { value: s }, `${s}×`)));
   const label = h("span.replay-label");
   const exit = h("button.btn.sm.warn", { onclick: () => run("replay.stop"), title: "Back to the live simulator" }, "Exit replay");
@@ -33,6 +35,7 @@ function createTransport(cls) {
     if (!next?.active) return;
     replace(play, icon(next.playing ? "pause" : "play"));
     play.title = next.playing ? "Pause" : "Play";
+    play.setAttribute("aria-label", play.title);
     label.textContent = next.meta.label;
     label.title = `Recorded ${new Date(next.meta.start).toLocaleString()}`;
     scrubber.max = next.duration;
@@ -80,8 +83,10 @@ registerPanel({
           h("dt", "Holding"), h("dd", `${clock(state.seconds)} (of the last 10 min), ${mb(state.bytes)}`),
           h("dt", "Saved"), h("dd", `${state.saved} this session in ${state.dir}`)),
         h("div.btn-row",
-          h("button.btn.sm.primary", { onclick: () => run("replay.load", { blackBox: true }) }, "Replay the black box"),
+          h("button.btn.sm.primary", { title: "Play back the last 10 minutes in the whole GUI (Exit replay goes back to the live field)",
+            onclick: () => run("replay.load", { blackBox: true }) }, "Replay the black box"),
           [2, 5, 10].map((minutes) => h("button.btn.sm", {
+            title: `Save the last ${minutes} minutes as a recording you can replay later`,
             onclick: async () => {
               const result = await cmd("recorder.saveBlackBox", { minutes }).catch((e) => toast(e.message, "error"));
               if (result) { toast(`Saved ${result.name}`); refresh(); }
@@ -111,7 +116,7 @@ registerPanel({
 
     function renderLibrary() {
       replace(libraryCard,
-        h("h3", "Recordings", h("span.grow"), h("button.btn.sm", { onclick: refresh }, "Refresh")),
+        h("h3", "Recordings", h("span.grow"), h("button.btn.sm", { title: "Look for new recordings", onclick: refresh }, "Refresh")),
         recordings.length ? h("table.tbl",
           h("tr", h("th", "Recording"), h("th", "When"), h("th", "Length"), h("th", "Size"), h("th", "")),
           recordings.map((r) => h("tr",
@@ -122,7 +127,8 @@ registerPanel({
             h("td.mono", clock(r.duration)),
             h("td.mono", mb(r.size)),
             h("td", h("div.row",
-              h("button.btn.sm.primary", { onclick: () => run("replay.load", { name: r.name }) }, "Replay"),
+              h("button.btn.sm.primary", { title: "Play this recording back in the whole GUI",
+                onclick: () => run("replay.load", { name: r.name }) }, "Replay"),
               h("button.btn.sm.ghost", {
                 title: "Delete this recording", "aria-label": "Delete recording",
                 onclick: async () => {

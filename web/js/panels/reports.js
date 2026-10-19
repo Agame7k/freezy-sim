@@ -53,10 +53,10 @@ registerPanel({
           toggle("callFouls", "Call pinning fouls", "Defenders pinning an opponent for 3 s draw a foul"),
           toggle("autoPost", "Auto commit & post", "Act as the scorekeeper: commit and post each match")),
         h("div.btn-row",
-          h("button.btn.sm", { onclick: () => run("referee.foul", { alliance: "red", major: false }) }, "Minor foul on red"),
-          h("button.btn.sm", { onclick: () => run("referee.foul", { alliance: "blue", major: false }) }, "Minor foul on blue"),
-          h("button.btn.sm", { onclick: () => run("referee.foul", { alliance: "red", major: true }) }, "Major on red"),
-          h("button.btn.sm", { onclick: () => run("referee.foul", { alliance: "blue", major: true }) }, "Major on blue")));
+          [["red", false], ["blue", false], ["red", true], ["blue", true]].map(([alliance, major]) => h("button.btn.sm", {
+            title: `Enter a ${major ? "major" : "minor"} foul against ${alliance} on the scoring panel (the other alliance gets the points)`,
+            onclick: () => run("referee.foul", { alliance, major }),
+          }, `${major ? "Major" : "Minor"} foul on ${alliance}`))));
     });
 
     on("reports.current", (report) => {
@@ -76,9 +76,11 @@ registerPanel({
             h("td", r.match, r.aborted ? " (aborted)" : ""),
             h("td.mono", h("span", { style: { color: "#ffb1b3" } }, r.redScore), " – ", h("span", { style: { color: "#b7d2ff" } }, r.blueScore)),
             h("td.mono", r.events),
-            h("td", h("button.btn.sm", { onclick: async () => {
+            h("td", h("button.btn.sm", { title: "Show this report below the list", onclick: async () => {
               const report = await cmd("reports.get", { file: r.file }).catch((e) => toast(e.message, "error"));
-              if (report) replace(detail, h("div.card", h("h3", report.match), reportDetail(report)));
+              if (!report) return;
+              replace(detail, h("div.card", h("h3", report.match), reportDetail(report)));
+              detail.scrollIntoView({ behavior: "smooth", block: "start" });
             } }, "Open"))))),
         detail);
     });

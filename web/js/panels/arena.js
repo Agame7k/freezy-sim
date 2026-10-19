@@ -83,7 +83,9 @@ registerPanel({
             h("button.btn.go", { onclick: () => useSource(path) }, "Use this one")))) : null,
         h("div.btn-row", h("button.btn", { class: found.length ? "" : "go", onclick: pickSource }, "Browse for the folder…")),
         h("div.btn-row", sourceInput,
-          h("button.btn", { onclick: () => useSource(sourceInput.value) }, "Use this path")),
+          h("button.btn", { title: "Use the folder typed in the box",
+            onclick: () => sourceInput.value.trim() ? useSource(sourceInput.value.trim()) : toast("Type the arena folder's path first.", "error") },
+          "Use this path")),
         h("div.hint", "No arena yet? Download Freezy Arena from github.com/Freezy-Arena/freezy-arena (Code → Download ZIP), ",
           "extract it, then choose that folder here."),
       );
@@ -116,14 +118,7 @@ registerPanel({
           h("dt", "PID"), h("dd", s.pid || "—"),
           h("dt", "URL"), h("dd", h("a", { href: s.url, target: "_blank" }, s.url)),
         ),
-        h("div.btn-row",
-          cmdButton("Start", "arena.start", {}, "go"),
-          cmdButton("Stop", "arena.stop", {}, "danger"),
-          cmdButton("Restart", "arena.restart"),
-          cmdButton("Rebuild from source", "arena.rebuild"),
-          cmdButton("Reset sandbox DB", "arena.resetDb", {}, "warn"),
-          h("button.btn", { title: "Point the simulator at a different arena folder", onclick: pickSource }, "Change arena folder…"),
-        ),
+        h("div.btn-row", arenaButtons(s)),
       );
     });
 
@@ -167,6 +162,35 @@ registerPanel({
         ),
       );
     });
+
+    // Launcher controls, enabled only when they can do something. "external" is an arena the sim did not start.
+    function arenaButtons(s) {
+      const stopped = ["stopped", "exited", "error", "idle", ""].includes(s.state || "");
+      const external = s.state === "external";
+      const buttons = [
+        cmdButton("Start", "arena.start", {}, "go", { title: "Start the sandbox arena (builds it first if needed)" }),
+        cmdButton("Stop", "arena.stop", {}, "danger",
+          { title: "Stop the sandbox arena. Matches, displays and scoring stop until it is started again." }),
+        cmdButton("Restart", "arena.restart", {}, "", { title: "Stop the sandbox arena and start it again" }),
+        cmdButton("Rebuild from source", "arena.rebuild", {}, "", {
+          title: "Build the arena again from your arena folder (after you pull new arena code), then start it",
+          confirm: { title: "Rebuild Freezy Arena?", message: "The arena stops, is rebuilt from your arena folder and starts again. This takes a minute or two.", okLabel: "Rebuild" },
+        }),
+        cmdButton("Reset sandbox DB", "arena.resetDb", {}, "warn", {
+          title: stopped ? "Delete the sandbox arena's database: teams, schedule, results and settings" : "Stop the arena first to reset its database",
+          confirm: { title: "Reset the sandbox database?", message: "The sandbox arena's teams, schedule, match results and settings are deleted. " +
+            "Your own arena folder is not touched. This can't be undone.", okLabel: "Delete database", danger: true },
+        }),
+        h("button.btn", { title: "Point the simulator at a different arena folder", onclick: pickSource }, "Change arena folder…"),
+      ];
+      const [start, stop, restart, rebuild, reset] = buttons;
+      start.disabled = !stopped || !!s.needsSource;
+      stop.disabled = stopped || external;
+      restart.disabled = external || !!s.needsSource;
+      rebuild.disabled = external || !!s.needsSource;
+      reset.disabled = !stopped;
+      return buttons;
+    }
 
     function service(label, healthy, enabled = true) {
       return h("div.row", led(!enabled ? "" : healthy ? "green" : "red"), h("span", label),

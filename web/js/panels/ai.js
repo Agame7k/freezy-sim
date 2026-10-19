@@ -52,6 +52,7 @@ registerPanel({
         h("button.btn.sm", { disabled: running, title: "The event's teams play practice matches offline (much faster than real time) and keep what they learn",
           onclick: () => run("world.ai.train", { matches: trainMatches }) }, "Pre-season training"),
         h("input", { type: "number", min: 6, max: 400, value: trainMatches, style: { width: "60px" },
+          "aria-label": "Training matches", title: "How many practice matches to play (6 to 400)",
           onchange: (e) => { trainMatches = Number(e.target.value) || 30; } }),
         h("span.small", " matches "),
         running ? h("span.small", `playing ${training.done}/${training.total} with ${training.teams} teams…`) :
@@ -189,7 +190,7 @@ registerPanel({
 
       replace(learnCard,
         h("h3", "What teams have learned", h("span.grow"),
-          h("button.btn.sm", { onclick: async () => (await confirmAction("Reset what every team has learned?", { message: "Every team forgets its autonomous routines, shot ranges, habits and match history, and starts learning again from scratch. This can't be undone.", okLabel: "Reset learning", danger: true })) && run("world.ai.resetLearning") }, "Reset learning")),
+          h("button.btn.sm", { title: "Make every team forget what it has learned and start again", onclick: async () => (await confirmAction("Reset what every team has learned?", { message: "Every team forgets its autonomous routines, shot ranges, habits and match history, and starts learning again from scratch. This can't be undone.", okLabel: "Reset learning", danger: true })) && run("world.ai.resetLearning") }, "Reset learning")),
         ai.learned && ai.learned.length ? h("table.tbl",
           h("tr", h("th", "Team"), h("th", "Matches"), h("th", "Accuracy"), h("th", "Climbs"), h("th", "Timed shots"),
             h("th", "Risk shift"), h("th", "Practice"), h("th", { title: "Build quality plus what the pit crew has fixed" }, "Reliability"),
@@ -227,7 +228,8 @@ registerPanel({
               onchange: (e) => { p[key] = Number(e.target.value); run("world.ai.personality", { team: editingTeam, personality: p }); },
             })),
             h("td.small.mono", key === "reaction" ? `${p[key].toFixed(2)} s` : p[key].toFixed(2))))),
-          h("div.btn-row", h("button.btn.sm", { onclick: () => run("world.ai.personality", { team: editingTeam, reset: true }) }, "Back to team's own")),
+          h("div.btn-row", h("button.btn.sm", { title: "Undo your changes to this drive team and go back to its own personality",
+            onclick: () => run("world.ai.personality", { team: editingTeam, reset: true }) }, "Back to team's own")),
           h("div.hint", "Every team has its own drive team, kept between sessions. Values shown include the difficulty preset and what the team has learned."));
       }
     });

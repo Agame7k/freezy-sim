@@ -8,20 +8,55 @@ registerPanel({
   id: "match",
   title: "Match",
   mount(el) {
+    const loadButton = cmdButton("Load test match", "match.loadTest", {}, "",
+      { title: "Load the arena's test match with the teams already in the stations (Load test in the top bar also fills the stations)" });
+    const startButton = cmdButton([icon("play"), "Start match"], "match.start", {}, "go",
+      { title: "Start the loaded match (needs Field Ready: no start blockers)" });
+    const abortButton = cmdButton([icon("stop"), "Abort"], "match.abort", {}, "danger",
+      { title: "Stop the match in progress and disable every robot" });
+    const commitButton = cmdButton([icon("check"), "Commit & post"], "match.commit", {}, "primary",
+      { title: "Save the results to the arena and show the score on the audience display" });
+    const discardButton = cmdButton("Discard results", "match.discard", {}, "warn", {
+      title: "Throw away this match's results without saving them",
+      confirm: { title: "Discard this match's results?", message: "The score is not saved or posted, and the arena loads the next match. This can't be undone.",
+        okLabel: "Discard results", danger: true },
+    });
+    const resetButton = cmdButton("Signal field reset", "match.signalReset", {}, "",
+      { title: "Tell the field crew it is safe to reset the field (green lights and the field-reset light). Not during a match." });
+    const volunteersButton = cmdButton("Signal volunteers", "match.signalVolunteers", {}, "",
+      { title: "Call the field volunteers in to count and collect FUEL (purple lights). Not during a match." });
     const controls = h("div.card",
       h("h3", "Match control"),
-      h("div.btn-row",
-        cmdButton("Load test match", "match.loadTest"),
-        cmdButton([icon("play"), "Start match"], "match.start", {}, "go"),
-        cmdButton([icon("stop"), "Abort"], "match.abort", {}, "danger"),
-        cmdButton([icon("check"), "Commit & post"], "match.commit", {}, "primary"),
-        cmdButton("Discard results", "match.discard", {}, "warn"),
-      ),
-      h("div.btn-row",
-        cmdButton("Signal field reset", "match.signalReset"),
-        cmdButton("Signal volunteers", "match.signalVolunteers"),
-      ),
+      h("div.btn-row", loadButton, startButton, abortButton, commitButton, discardButton),
+      h("div.btn-row", resetButton, volunteersButton),
     );
+    // Only the actions the arena accepts in the current match state are enabled; it ignores or rejects the rest. With the
+    // arena offline, none of them can work.
+    let lastStatus = null;
+    let matchPlayUp = false;
+    on("arena.sockets", (sockets) => {
+      matchPlayUp = !!(sockets || []).find((s) => s.name === "matchPlay")?.connected;
+      gateButtons(lastStatus);
+    });
+    on("arena.arenaStatus", (status) => gateButtons(status));
+    function gateButtons(status) {
+      lastStatus = status;
+      if (!status || !matchPlayUp) {
+        for (const button of [loadButton, startButton, abortButton, commitButton, discardButton, resetButton, volunteersButton]) {
+          button.disabled = true;
+        }
+        return;
+      }
+      const state = status.MatchState;
+      const inMatch = state >= 1 && state <= 4;
+      loadButton.disabled = inMatch || state === 6;
+      startButton.disabled = !(state === 0 && status.CanStartMatch);
+      abortButton.disabled = !inMatch && state !== 6;
+      commitButton.disabled = state !== 5;
+      discardButton.disabled = state !== 5;
+      resetButton.disabled = inMatch;
+      volunteersButton.disabled = inMatch;
+    }
 
     const stations = h("div.card");
     const listCard = h("div.card");
@@ -31,7 +66,7 @@ registerPanel({
 
     replace(listCard,
       h("h3", "Schedule", h("span.grow"), typeSelect,
-        h("button.btn.sm", { onclick: loadList }, "Refresh")),
+        h("button.btn.sm", { onclick: loadList, title: "Fetch the schedule from the arena again" }, "Refresh")),
       listBody,
     );
     // Event director: play the schedule unattended (load, field reset, start, AI play, auto-referee, commit).
@@ -42,18 +77,25 @@ registerPanel({
     const directorLimit = h("input", { type: "number", min: 0, value: 0, style: { width: "64px" },
       title: "How many matches to play (0 = all of them)", "aria-label": "Match limit" });
     const directorBody = h("div");
+    const directorRun = h("button.btn.sm.go", {
+      title: "Play the chosen matches unattended: load, field reset, start, AI play, referee and commit",
+      onclick: () => cmd("director.start", { type: directorType.value, limit: Number(directorLimit.value) || 0 })
+        .catch((e) => toast(e.message, "error")),
+    }, icon("play", 12), "Run");
+    const directorStop = h("button.btn.sm.danger", { disabled: true, title: "Stop after the current step; the match on the field is left as it is",
+      onclick: () => cmd("director.stop").catch((e) => toast(e.message, "error")) }, icon("stop", 12), "Stop");
     replace(directorCard,
       h("h3", "Event director"),
       h("div.row.wrap", { style: { marginBottom: "8px" } },
         directorType,
         h("label.row.small.muted", { style: { gap: "6px" } }, "Matches", directorLimit, h("span.hint", "0 = all")),
         h("span.grow"),
-        h("button.btn.sm.go", { onclick: () => cmd("director.start", { type: directorType.value,
-          limit: Number(directorLimit.value) || 0 }).catch((e) => toast(e.message, "error")) }, icon("play", 12), "Run"),
-        h("button.btn.sm.danger", { onclick: () => cmd("director.stop") }, icon("stop", 12), "Stop")),
+        directorRun, directorStop),
       directorBody);
     on("director.state", (state) => {
       if (!state) return;
+      directorRun.disabled = !!state.running;
+      directorStop.disabled = !state.running;
       const done = (state.matches || []).length;
       replace(directorBody,
         state.running ? h("div.small", `Running ${state.type}: ${done}/${state.total} done · ${state.current || ""} — ${state.phase}`) :
@@ -105,7 +147,7 @@ registerPanel({
     async function loadList() {
       try {
         const matches = await cmd("arena.matches", { type: typeSelect.value });
-        replace(listBody, !matches?.length ? h("div.hint", "No matches of this type. Generate a schedule in the arena.")
+        replace(listBody, !matches?.length ? h("div.hint", "No matches of this type yet. Generate a schedule in the arena, then Refresh.")
           : h("table.tbl",
             h("tr", h("th", "Match"), h("th", "Red"), h("th", "Blue"), h("th", "")),
             matches.map((m) => h("tr",
@@ -113,6 +155,7 @@ registerPanel({
               h("td.mono", { style: { color: "#ffb1b3" } }, [m.Red1, m.Red2, m.Red3].join(" ")),
               h("td.mono", { style: { color: "#b7d2ff" } }, [m.Blue1, m.Blue2, m.Blue3].join(" ")),
               h("td", h("button.btn.sm", {
+                title: `Load ${m.LongName || m.ShortName} into the arena (not during a match)`,
                 onclick: () => cmd("match.load", { matchId: m.Id }).catch((e) => toast(e.message, "error")),
               }, "Load")),
             ))));
@@ -127,7 +170,8 @@ registerPanel({
       replace(stations, h("h3", "Stations (arena view)"),
         h("table.tbl",
           h("tr", h("th", "Stn"), h("th", "Team"), h("th", "DS"), h("th", "Radio"), h("th", "RIO"), h("th", "Code"),
-            h("th", "Batt"), h("th", "E"), h("th", "A"), h("th", "")),
+            h("th", { title: "Battery voltage" }, "Batt"), h("th", { title: "E-stopped" }, "E"),
+            h("th", { title: "A-stopped" }, "A"), h("th", "")),
           STATIONS.map((station) => {
             const s = status.AllianceStations[station] || {};
             const ds = s.DsConn || {};
@@ -142,12 +186,21 @@ registerPanel({
               h("td.mono", ds.BatteryVoltage ? ds.BatteryVoltage.toFixed(1) : "—"),
               h("td", led(s.EStop ? "amber" : "")),
               h("td", led(s.AStop ? "amber" : "")),
-              h("td", h("button.btn.sm", { class: s.Bypass ? "warn" : "",
+              h("td", h("button.btn.sm", { class: s.Bypass ? "warn" : "", "aria-pressed": String(!!s.Bypass),
+                title: s.Bypass ? "Bypassed: the match can start without this station. Click to stop bypassing it."
+                  : "Let the match start without this station (its robot stays disabled)",
                 onclick: () => cmd("match.bypass", { station }).catch((e) => toast(e.message, "error")),
               }, s.Bypass ? "Bypassed" : "Bypass")),
             );
           })));
     });
-    setTimeout(loadList, 1500);
+    // Load the schedule whenever the arena (re)connects, so it is not left showing an error from before the arena was up.
+    let arenaUp = false;
+    on("arena.sockets", (sockets) => {
+      const up = !!(sockets || []).find((s) => s.name === "matchPlay")?.connected;
+      if (up && !arenaUp) setTimeout(loadList, 500);
+      arenaUp = up;
+    });
+    replace(listBody, h("div.hint", "Waiting for the arena…"));
   },
 });

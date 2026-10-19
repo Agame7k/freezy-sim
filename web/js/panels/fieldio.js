@@ -39,7 +39,8 @@ registerPanel({
 
     const profileCard = h("div.card",
       h("h3", "Field I/O profile"),
-      h("div.row", profileSelect, cmdButton("Apply to arena", "arena.configure", {}, "primary")),
+      h("div.row", profileSelect, cmdButton("Apply to arena", "arena.configure", {}, "primary",
+        { title: "Send this field I/O setup to the arena's settings again (it is also sent when you change the profile)" })),
       h("div.hint", { style: { marginTop: "6px" } },
         "Alternate IO: E-stops via emulated ESP32 boxes, hub counts via the arena PLC websocket. ",
         "Modbus PLC: the arena polls the emulated PLC on 127.0.0.1:502 every 100 ms."));
@@ -65,9 +66,12 @@ registerPanel({
           h("dt", "Heartbeat"), h("dd", m.heartbeatOk ? "OK" : "LOST — outputs forced off"),
           m.error ? [h("dt", "Error"), h("dd", { style: { color: "var(--red)" } }, m.error)] : null),
         h("div.btn-row",
-          h("button.btn.sm", { class: m.offline ? "off" : "", onclick: () => run("field.plcOffline", { offline: !m.offline }) },
+          h("button.btn.sm", { class: m.offline ? "off" : "", "aria-pressed": String(!!m.offline),
+            title: "Stop the emulated PLC answering the arena, as if its cable were pulled",
+            onclick: () => run("field.plcOffline", { offline: !m.offline }) },
             m.offline ? "PLC offline (click to restore)" : "Take PLC offline"),
-          h("button.btn.sm", { onclick: () => run("field.plcLag", { ms: m.responseLagMs ? 0 : 1500 }) },
+          h("button.btn.sm", { title: "Make the PLC answer 1.5 s late, to test the arena's heartbeat handling",
+            onclick: () => run("field.plcLag", { ms: m.responseLagMs ? 0 : 1500 }) },
             m.responseLagMs ? `Lag ${m.responseLagMs}ms (clear)` : "Inject 1.5 s lag"),
         ));
       } else if (t.profile === "altio") {
@@ -80,7 +84,8 @@ registerPanel({
               h("td.mono", b.address),
               h("td.mono", b.posts),
               h("td.mono", { title: "Arena health-check connections" }, b.probes),
-              h("td", h("button.btn.sm", { onclick: () => run("field.box", { name: b.name, online: !b.online }) },
+              h("td", h("button.btn.sm", { title: b.online ? "Unplug this E-stop box from the network" : "Plug this E-stop box back in",
+                onclick: () => run("field.box", { name: b.name, online: !b.online }) },
                 b.online ? "Unplug" : "Plug in")),
             ))),
           t.boxes.some((b) => b.bindError || b.postError) ? h("div.hint", { style: { color: "var(--amber)" } },
@@ -110,30 +115,36 @@ registerPanel({
         h("div.row", { style: { gap: "12px", marginBottom: "8px" } },
           h("button.btn", {
             style: { background: io.fieldEStop ? "#b3191f" : "#4a1416", borderColor: "#ff4d4f", fontWeight: 700, padding: "10px 14px" },
+            "aria-pressed": String(!!io.fieldEStop),
+            title: io.fieldEStop ? "The field E-stop is pressed: every robot is stopped. Click to release it." : "Press the field E-stop: stops every robot on the field",
             onclick: () => run("field.set", { control: "fieldEStop", index: 0, value: !io.fieldEStop }),
           }, io.fieldEStop ? "FIELD E-STOP ACTIVE (release)" : "FIELD E-STOP"),
-          h("button.btn", { class: io.ftaReady ? "on" : "",
+          h("button.btn", { class: io.ftaReady ? "on" : "", "aria-pressed": String(!!io.ftaReady),
+            title: io.ftaReady ? "The FTA has signalled the field is ready. Click to turn the switch off." : "The FTA key switch. Click to turn it on.",
             onclick: () => run("field.set", { control: "ftaReady", index: 0, value: !io.ftaReady }) },
-          io.ftaReady ? "FTA ready ✓" : "FTA ready switch"),
+          io.ftaReady ? "FTA ready: on" : "FTA ready: off"),
         ),
         h("table.tbl",
           h("tr", h("th", "Station"), h("th", "E-stop"), h("th", "A-stop"), h("th", "Ethernet")),
           STATIONS.map((s, i) => h("tr",
             h("td.mono", { style: { color: s[0] === "R" ? "#ffb1b3" : "#b7d2ff" } }, s),
-            h("td", h("button.btn.sm", { class: io.teamEStop[i] ? "off" : "",
+            h("td", h("button.btn.sm", { class: io.teamEStop[i] ? "off" : "", "aria-pressed": String(!!io.teamEStop[i]),
+              title: io.teamEStop[i] ? "Pressed: this robot is stopped for the rest of the match. Click to release." : "Press this station's E-stop: stops the robot for the rest of the match",
               onclick: () => run("field.set", { control: "teamEStop", index: i, value: !io.teamEStop[i] }) },
             io.teamEStop[i] ? "PRESSED" : "E-stop")),
             h("td.row",
-              h("button.btn.sm", { class: io.teamAStop[i] ? "warn" : "",
+              h("button.btn.sm", { class: io.teamAStop[i] ? "warn" : "", "aria-pressed": String(!!io.teamAStop[i]),
+                title: io.teamAStop[i] ? "Held down. Click to release." : "Hold this station's A-stop down: disables the robot for the rest of AUTO",
                 onclick: () => run("field.set", { control: "teamAStop", index: i, value: !io.teamAStop[i] }) },
               io.teamAStop[i] ? "PRESSED" : "A-stop"),
-              h("button.btn.sm.ghost", { title: "Tap (press for 0.8 s)",
+              h("button.btn.sm.ghost", { title: "Tap the A-stop: press it for 0.8 s and let go",
                 onclick: () => run("field.pulse", { control: "teamAStop", index: i, ms: 800 }) }, "tap")),
             h("td", led(io.inputs[13 + i] ? "green" : "red")),
           ))),
         h("div.small.muted", { style: { marginTop: "6px" } },
           "ArmorBlocks: ", ["redDs", "blueDs", "redIoLink", "blueIoLink"].map((name, i) =>
-            h("button.btn.sm", { class: io.armorBlocks[i] ? "on" : "off", style: { marginLeft: "4px" },
+            h("button.btn.sm", { class: io.armorBlocks[i] ? "on" : "off", style: { marginLeft: "4px" }, "aria-pressed": String(!!io.armorBlocks[i]),
+              title: `ArmorBlock ${name}: ${io.armorBlocks[i] ? "connected" : "disconnected"}. Click to ${io.armorBlocks[i] ? "disconnect" : "connect"} it.`,
               onclick: () => run("field.set", { control: "armorBlock", index: i, value: !io.armorBlocks[i] }) }, name))),
       );
 
@@ -177,7 +188,8 @@ registerPanel({
             h("input", { type: "range", min: 0, max: 10, step: 0.5, value: rates[alliance], style: { flex: 1 },
               onchange: (e) => run("field.feeder", { alliance, rate: Number(e.target.value) }) }),
             h("span.mono", `${rates[alliance]}/s`)))),
-        h("div.btn-row", cmdButton("Zero counters", "field.resetHubs", {}, "warn")));
+        h("div.btn-row", cmdButton("Zero counters", "field.resetHubs", {}, "warn",
+          { title: "Set every hub sensor count back to zero" })));
 
       const arenaIo = get("arena.plcIo") || {};
       replace(ioCard,

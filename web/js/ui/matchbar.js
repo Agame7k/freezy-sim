@@ -139,16 +139,27 @@ export function mountMatchbar(host) {
     blueScore.textContent = score?.Blue?.ScoreSummary?.Score ?? 0;
   });
 
+  // Match buttons are enabled only for what the arena accepts now; with the arena offline, nothing.
+  let lastStatus = null;
+  function gateButtons() {
+    const status = arenaUp ? lastStatus : null;
+    const state = status?.MatchState;
+    testButton.disabled = !arenaUp || (state >= 1 && state <= 4) || state === 6;
+    startButton.disabled = !(status && state === 0 && status.CanStartMatch);
+    abortButton.disabled = !status || (!(state >= 1 && state <= 4) && state !== 6);
+    commitButton.disabled = !status || state !== 5;
+  }
+  gateButtons();
+  on("arena.sockets", gateButtons);
+
   on("arena.arenaStatus", (status) => {
     if (!status) return;
+    lastStatus = status;
+    gateButtons();
     const okay = status.CanStartMatch;
     ready.className = "tag " + (okay ? "good" : "bad");
     ready.textContent = okay ? "READY" : `${(status.StartMatchConditions || []).length} blocker(s)`;
     readyCell.title = (status.StartMatchConditions || []).join("\n");
-    const state = status.MatchState;
-    startButton.disabled = !(state === 0 && okay);
-    abortButton.disabled = !(state >= 1 && state <= 4) && state !== 6;
-    commitButton.disabled = state !== 5;
   });
 
   function tick() {

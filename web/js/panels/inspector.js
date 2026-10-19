@@ -39,9 +39,17 @@ registerPanel({
       h("div.row", { style: { marginTop: "6px" } },
         h("input", { type: "search", placeholder: "Filter (station, FC15, universe, POST…)", style: { flex: "1" },
           oninput: (e) => { text = e.target.value; restart(); } }),
-        h("button.btn.sm", { onclick: (e) => { paused = !paused; e.target.textContent = paused ? "Resume" : "Pause"; } }, "Pause"),
-        h("button.btn.sm", { onclick: () => { cmd("inspector.clear").then(restart); } }, "Clear"),
-        h("button.btn.sm", { onclick: exportJson }, "Export")),
+        h("button.btn.sm", { title: "Stop adding new packets to the list (they are still captured)", "aria-pressed": "false",
+          onclick: (e) => {
+            paused = !paused;
+            const button = e.currentTarget;
+            button.textContent = paused ? "Resume" : "Pause";
+            button.setAttribute("aria-pressed", String(paused));
+            button.title = paused ? "Show new packets again" : "Stop adding new packets to the list (they are still captured)";
+          } }, "Pause"),
+        h("button.btn.sm", { title: "Delete every captured packet",
+          onclick: () => cmd("inspector.clear").then(restart).catch((err) => toast(err.message, "error")) }, "Clear"),
+        h("button.btn.sm", { title: "Save the packets in the list as a JSON file", onclick: exportJson }, "Export")),
       h("div.hint", "Click a line for its raw bytes. Driver-station status packets are sampled (1 in 25); everything else is complete."));
 
     function restart() {

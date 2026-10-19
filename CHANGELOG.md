@@ -6,6 +6,49 @@ the scenario format or the recording format.
 
 ## [Unreleased]
 
+### Added
+- Every button in the GUI says what it does when you hover over it. That covers the Match, Driver Stations, Field
+  I/O, Robots, Network, Chaos, Match Log, Replay, Inspector, Log, Arena and AI panels and the graphics menu. Toggles
+  such as the chute doors, Ethernet cables, E-stops, network devices and bypass also say what a click will change, and
+  report their state to screen readers.
+- Confirmation before **Discard results**, **Reset sandbox DB**, **Rebuild from source** and removing the imported
+  field CAD. Each says what will happen and whether it can be undone.
+- A test that fails if a GUI button sends a command that no part of the simulator handles, so a renamed handler or a
+  typo is caught before anyone clicks the button. Also tests for the **Follow arena teams** setting and the long
+  sandbox path message.
+
+### Changed
+- Buttons are greyed out when they can't work, instead of failing when clicked:
+  - The match buttons in the top bar and the Match panel while the arena is offline.
+  - In the Match panel, the actions the arena would ignore or reject in the current match state. These are Start
+    without Field Ready, Commit and Discard before the match ends, field-reset and volunteer signals during a match,
+    and Load during a match. The Match panel now follows the same rules as the top bar.
+  - The Arena panel's **Start** while the arena runs, **Stop** while it is stopped, and **Reset sandbox DB** until
+    the arena is stopped.
+  - The event director's **Run** while it is running, and **Stop** while it isn't.
+- Clearer toggle labels: **Door open** / **Door closed** (was Open / Closed), **Ethernet plugged in** / **Ethernet
+  unplugged** (was "Ethernet ✓" / Unplugged), and **FTA ready: on** / **off**. The foul buttons read **Minor foul on
+  red** and **Major foul on red** (was "Major on red").
+- The Match panel's schedule loads as soon as the arena connects, and again after it reconnects. Before, it loaded
+  once, 1.5 s after the page opened, and kept showing an error if the arena wasn't up yet.
+- Opening a saved match report scrolls down to it.
+- The docs no longer refer to the 🐞 and 🖥 buttons, which became the **Report** button and a screen icon in 0.1.1.
+  The user guide has a new "Buttons" section.
+
+### Fixed
+- **Follow arena teams** in the Driver Stations panel always showed as ticked, even when `ds.followArena` was off in
+  `freezy-sim.json`. It now shows the real setting.
+- **Drive** and **Follow camera** in a popped-out Robots panel did nothing. They now say they need the main window's
+  3D view.
+- The Inspector's **Clear**, the event director's **Stop** and the Driver Stations panel's **Follow arena teams**
+  ignored errors. They now show them.
+- The replay play button's screen-reader label always said "Play", even while playing. The −5 s and +5 s buttons no
+  longer seek before the start or past the end of the recording.
+- **Use this path** in the arena-folder setup with an empty box now asks for a path instead of trying to use "".
+- A sim in a deeply nested folder couldn't start the arena, and said only "The directory name is invalid". Windows
+  can't start a program in a folder whose path is longer than 258 characters. The Arena panel now says that the path
+  is too long, and how to fix it: move the sim somewhere shorter, or set `arena.sandboxDir`.
+
 ## [0.1.1] - 2026-10-18
 
 ### Added

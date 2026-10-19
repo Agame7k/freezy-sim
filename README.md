@@ -165,7 +165,7 @@ Every flag is in [docs/CLI.md](docs/CLI.md). Running the suite in CI is covered 
 
 Whenever a headless run finds a problem, it saves a **bug-report bundle** (`run/reports/bundle-*.zip`) with a
 replayable black-box recording, the match seed, every live state value, the sim's and arena's logs, the arena's
-database and the config (passwords removed). The 🐞 button in the GUI saves one on demand.
+database and the config (passwords removed). The **Report** button in the top bar saves one on demand.
 
 ## Compatibility
 

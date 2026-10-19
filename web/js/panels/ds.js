@@ -67,13 +67,19 @@ function makeCard(name) {
     h("div.row", h("span.small.muted", { style: { width: "52px" } }, "Latency"), el.latency, el.latencyValue),
     h("div.btn-row",
       el.dsOn, el.ethernet,
-      h("button.btn.sm", { onclick: () => act("ds.rebootRio", name) }, "Reboot RIO"),
-      h("button.btn.sm", { onclick: () => act("ds.rebootRadio", name) }, "Reboot radio"),
-      h("button.btn.sm", { onclick: () => act("ds.crashCode", name) }, "Crash code"),
-      h("button.btn.sm", { onclick: () => act("ds.restartCode", name) }, "Restart code"),
-      h("button.btn.sm", { onclick: () => act("ds.powerCycle", name) }, "Power cycle"),
-      h("button.btn.sm", { onclick: () => act("ds.freshBattery", name) }, "Fresh battery"),
-      h("button.btn.sm", { onclick: () => set(name, "batteryFull", 12.15), title: "Swap in a tired battery" },
+      h("button.btn.sm", { title: "Reboot the roboRIO: robot comms drop until it boots again",
+        onclick: () => act("ds.rebootRio", name) }, "Reboot RIO"),
+      h("button.btn.sm", { title: "Reboot the robot radio: the link drops until it reconnects",
+        onclick: () => act("ds.rebootRadio", name) }, "Reboot radio"),
+      h("button.btn.sm", { title: "Make the robot code crash (the robot stays linked but has no code)",
+        onclick: () => act("ds.crashCode", name) }, "Crash code"),
+      h("button.btn.sm", { title: "Restart the robot code, as the drivers would from the DS",
+        onclick: () => act("ds.restartCode", name) }, "Restart code"),
+      h("button.btn.sm", { title: "Turn the robot off and on: radio, roboRIO and code all boot again",
+        onclick: () => act("ds.powerCycle", name) }, "Power cycle"),
+      h("button.btn.sm", { title: "Swap in a fully charged battery",
+        onclick: () => act("ds.freshBattery", name) }, "Fresh battery"),
+      h("button.btn.sm", { onclick: () => set(name, "batteryFull", 12.15), title: "Swap in a tired battery that sags under load" },
         "Weak battery"),
       el.legacy,
     ),
@@ -136,11 +142,16 @@ function updateCard(el, s) {
   }
   el.dsOn.className = "btn sm " + (s.settings.dsOn ? "on" : "off");
   el.dsOn.textContent = s.settings.dsOn ? "DS on" : "DS off";
+  el.dsOn.setAttribute("aria-pressed", String(!!s.settings.dsOn));
+  el.dsOn.title = s.settings.dsOn ? "The Driver Station software is running. Click to close it." : "The Driver Station software is closed. Click to open it.";
   el.dsOn.onclick = () => set(name, "dsOn", !s.settings.dsOn);
   el.ethernet.className = "btn sm " + (s.settings.ethernet ? "on" : "off");
-  el.ethernet.textContent = s.settings.ethernet ? "Ethernet ✓" : "Unplugged";
+  el.ethernet.textContent = s.settings.ethernet ? "Ethernet plugged in" : "Ethernet unplugged";
+  el.ethernet.setAttribute("aria-pressed", String(!!s.settings.ethernet));
+  el.ethernet.title = s.settings.ethernet ? "The DS laptop is plugged into the field. Click to unplug its cable." : "Click to plug the DS laptop back into the field";
   el.ethernet.onclick = () => set(name, "ethernet", !s.settings.ethernet);
   el.legacy.textContent = s.protocol === "legacy" ? "Use new DS" : "Use legacy DS";
+  el.legacy.title = "Switch this station between the new DS protocol and the legacy NI Driver Station protocol";
   el.legacy.onclick = () => set(name, "legacy", s.protocol !== "legacy");
 
   replace(el.stats,
@@ -163,16 +174,19 @@ registerPanel({
   title: "Driver Stations",
   mount(el, { setBadge }) {
     const follow = h("input", { type: "checkbox", checked: true,
-      onchange: (e) => cmd("ds.follow", { follow: e.target.checked }) });
+      onchange: (e) => cmd("ds.follow", { follow: e.target.checked }).catch((err) => toast(err.message, "error")) });
     el.append(h("div.card",
       h("h3", "All stations"),
       h("div.btn-row",
-        cmdButton("Quick test match", "match.quickTest", {}, "primary"),
-        h("button.btn", { onclick: () => set("all", "dsOn", true) }, "All DS on"),
-        h("button.btn", { onclick: () => set("all", "dsOn", false) }, "All DS off"),
-        h("button.btn", { onclick: () => act("ds.freshBattery", "all") }, "Fresh batteries"),
-        h("button.btn", { onclick: () => act("ds.resetStats", "all") }, "Reset stats"),
-        h("label.check", follow, "Follow arena teams"),
+        cmdButton("Quick test match", "match.quickTest", {}, "primary",
+          { title: "Load a test match with teams in all six stations" }),
+        h("button.btn", { title: "Open the Driver Station software at every station", onclick: () => set("all", "dsOn", true) }, "All DS on"),
+        h("button.btn", { title: "Close the Driver Station software at every station", onclick: () => set("all", "dsOn", false) }, "All DS off"),
+        h("button.btn", { title: "Give every robot a fully charged battery", onclick: () => act("ds.freshBattery", "all") }, "Fresh batteries"),
+        h("button.btn", { title: "Zero the lost-packet and control-gap counters on every station",
+          onclick: () => act("ds.resetStats", "all") }, "Reset stats"),
+        h("label.check", { title: "Use the teams the arena assigns to each station. Off: stations keep their own team numbers." },
+          follow, "Follow arena teams"),
       )));
     const grid = h("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: "0 10px" } });
     el.append(grid);
@@ -186,6 +200,7 @@ registerPanel({
           grid.appendChild(card.root);
         }
         updateCard(cards.get(s.station), s);
+        if (document.activeElement !== follow) follow.checked = s.followArena;
         if (s.team && !s.robotLinked) problems++;
       }
       setBadge(problems ? String(problems) : "");

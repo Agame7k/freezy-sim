@@ -20,17 +20,21 @@ registerPanel({
 
     on("network.state", (n) => {
       if (!n) return;
-      const device = (name, label, online) => h("button.btn.sm", { class: online ? "on" : "off",
+      const device = (name, label, online) => h("button.btn.sm", { class: online ? "on" : "off", "aria-pressed": String(!!online),
+        title: online ? `${label}: online. Click to take it offline, as if it lost power.` : `${label}: offline. Click to bring it back.`,
         onclick: () => run("network.device", { device: name, online: !online }) }, online ? `${label} online` : `${label} OFFLINE`);
       replace(topCard,
         h("h3", "Managed field network", h("span.grow"), n.enabled ? tag("network security ON", "good") : tag("off")),
         h("div.row.wrap",
-          h("button.btn.sm", { class: n.enabled ? "on" : "", onclick: () => run("network.enable", { enabled: !n.enabled }) },
+          h("button.btn.sm", { class: n.enabled ? "on" : "",
+            title: "Emulate the field's access point, switch and SCCs, so robots and driver stations link the way they do at an event",
+            onclick: () => run("network.enable", { enabled: !n.enabled }) },
             n.enabled ? "Disable network emulation" : "Enable network emulation"),
           device("ap", "AP", n.ap.online), device("switch", "Switch", n.switch.online),
           device("redScc", "Red SCC", n.scc[0].online), device("blueScc", "Blue SCC", n.scc[1].online)),
         h("div.row.small", { style: { marginTop: "6px" } }, h("span.muted", "Wi-Fi interference"),
           h("input", { type: "range", min: 0, max: 30, step: 1, value: n.ap.interference, style: { flex: 1 },
+            "aria-label": "Wi-Fi interference", title: "Extra noise on the field Wi-Fi: lowers every robot's signal-to-noise ratio",
             onchange: (e) => run("network.interference", { db: Number(e.target.value) }) }),
           h("span.mono", `${n.ap.interference} dB`)),
         h("div.hint", "With network security on, each match load makes the arena reprogram the AP (team SSIDs/WPA keys), ",

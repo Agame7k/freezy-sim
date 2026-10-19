@@ -15,6 +15,8 @@ const AUTOS = [["preload", "Preload only"], ["center", "Center rush"], ["depot",
 const STARTS = [["outpost-trench", "Outpost-side trench"], ["outpost-bump", "Outpost-side bump"], ["hub", "Behind hub"], ["depot-bump", "Depot-side bump"], ["depot-trench", "Depot-side trench"]];
 
 const run = (command, args) => cmd(command, args).catch((e) => toast(e.message, "error"));
+// A popped-out panel window has no 3D view to drive or point a camera in.
+const NO_3D = "That needs the 3D view. Use it from the main Freezy Sim window.";
 
 function planSelect(options, override, current, onPick) {
   return h("select", { onchange: (e) => onPick(e.target.value), title: override ? "Overridden" : "Chosen by the alliance game plan" },
@@ -39,8 +41,10 @@ registerPanel({
       replace(fieldCard,
         h("h3", "Field", h("span.grow"), w.paused ? tag("PAUSED", "warn") : tag(`t=${w.time.toFixed(0)}s`)),
         h("div.btn-row",
-          cmdButton("Field reset (restage FUEL, new game plans)", "world.reset", {}, "primary"),
-          h("button.btn", { onclick: () => run("world.pause", { paused: !w.paused }) }, icon(w.paused ? "play" : "pause"), w.paused ? "Resume physics" : "Pause physics"),
+          cmdButton("Field reset (restage FUEL, new game plans)", "world.reset", {}, "primary",
+            { title: "Put every FUEL back where it starts, return the robots to their start spots and pick new game plans" }),
+          h("button.btn", { title: w.paused ? "Start the physics again" : "Freeze the robots and FUEL where they are (the match clock keeps running)",
+            onclick: () => run("world.pause", { paused: !w.paused }) }, icon(w.paused ? "play" : "pause"), w.paused ? "Resume physics" : "Pause physics"),
         ),
         h("dl.kv",
           h("dt", "FUEL"), h("dd", Object.entries(w.fuel).map(([k, v]) => `${k} ${v}`).join(" · ")),
@@ -87,7 +91,9 @@ registerPanel({
               h("td.mono", r.team || "—"),
               h("td", h("input", {
                 type: "range", min: 0.4, max: 1.6, step: 0.1, value: r.skill, style: { width: "60px" },
-                title: `Skill ${r.skill.toFixed(1)}`,
+                title: `Driver skill ${r.skill.toFixed(1)} (1.0 is average; lower is weaker, higher is stronger)`,
+                "aria-label": `${r.station} driver skill`,
+                oninput: (e) => { e.target.title = `Driver skill ${Number(e.target.value).toFixed(1)}`; },
                 onchange: (e) => run("world.robot", { station: r.station, skill: Number(e.target.value) }),
               })),
               h("td.small", led(r.enabled ? "green" : ""), " ", r.manual ? "manual" : (r.aiState || "—")),
@@ -96,13 +102,17 @@ registerPanel({
               h("td.mono", r.climbing ? `↑${r.climbLevel}` : r.climbLevel ? `L${r.climbLevel}` : "—"),
               h("td.small", { style: { color: "var(--amber)" } }, (r.faults || []).join(", ")),
               h("td.row",
-                h("button.btn.sm", { class: r.manual ? "on" : "", title: "Drive this robot with keyboard/gamepad",
-                  "aria-label": "Drive", onclick: () => window.venue?.drive?.start(r.station) }, icon("gamepad")),
-                r.manual ? h("button.btn.sm", { title: "Hand back to the AI driver",
+                h("button.btn.sm", { class: r.manual ? "on" : "", title: "Drive this robot yourself with the keyboard or a gamepad",
+                  "aria-label": `Drive ${r.station}`, "aria-pressed": String(!!r.manual), onclick: () => {
+                    if (window.venue?.drive) window.venue.drive.start(r.station);
+                    else toast(NO_3D, "error");
+                  } }, icon("gamepad")),
+                r.manual ? h("button.btn.sm", { title: "Hand this robot back to its AI driver",
                   onclick: () => run("world.robot", { station: r.station, manual: false }) }, "AI") : null,
-                h("button.btn.sm", { title: "Follow camera", "aria-label": "Follow camera", onclick: () => {
+                h("button.btn.sm", { title: "Point the 3D camera at this robot and follow it", "aria-label": `Follow ${r.station}`, onclick: () => {
                   const robot = window.venue?.robots?.[r.station];
                   if (robot) window.venue.cameras.followRobot(robot.root, r.station);
+                  else toast(NO_3D, "error");
                 } }, icon("video"))),
             ))),
           h("div.hint", { style: { marginTop: "6px" } },
@@ -118,8 +128,9 @@ registerPanel({
               return h("tr",
                 h("td", { style: { color: alliance === "red" ? "#ffb1b3" : "#b7d2ff" } }, alliance),
                 h("td.mono", o.chute), h("td.mono", o.corral),
-                h("td", h("button.btn.sm", { class: o.doorOpen ? "warn" : "",
-                  onclick: () => run("world.chute", { alliance, open: !o.doorOpen }) }, o.doorOpen ? "Open" : "Closed")),
+                h("td", h("button.btn.sm", { class: o.doorOpen ? "warn" : "", "aria-pressed": String(!!o.doorOpen),
+                  title: o.doorOpen ? "The chute door is open. Click to close it." : "The chute door is closed. Click to open it.",
+                  onclick: () => run("world.chute", { alliance, open: !o.doorOpen }) }, o.doorOpen ? "Door open" : "Door closed")),
                 h("td", h("select", { onchange: (e) => run("world.humanPlayer", { alliance, mode: e.target.value }) },
                   ["auto", "feed", "score", "idle"].map((mode) => h("option", { value: mode, selected: mode === o.humanMode }, mode)))),
               );

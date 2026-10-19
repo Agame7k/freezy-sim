@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -115,6 +116,20 @@ func (launcher *Launcher) Status() Status {
 	launcher.mu.Lock()
 	defer launcher.mu.Unlock()
 	return launcher.status
+}
+
+// maxWorkingDir is the longest folder Windows will start a program in (MAX_PATH less the trailing backslash and NUL).
+// Past it, starting the arena fails with only "The directory name is invalid".
+const maxWorkingDir = 258
+
+// checkWorkingDir explains a sandbox folder whose path is too long for Windows to start the arena in.
+func checkWorkingDir(dir, goos string) error {
+	if goos != "windows" || len(dir) <= maxWorkingDir {
+		return nil
+	}
+	return fmt.Errorf("the sandbox folder's path is %d characters long, and Windows can't start a program in a folder "+
+		"with a path longer than %d: %s. Move freezy-sim to a shorter path (such as C:\\freezy-sim), or set "+
+		"arena.sandboxDir in freezy-sim.json to a short folder", len(dir), maxWorkingDir, dir)
 }
 
 func (launcher *Launcher) sandboxDir() string {
@@ -310,6 +325,9 @@ func (launcher *Launcher) launch() error {
 	}
 	cmd.Stderr = cmd.Stdout
 
+	if err := checkWorkingDir(sandbox, runtime.GOOS); err != nil {
+		return err
+	}
 	launcher.setState("starting", "Launching "+exePath+" -dev")
 	if err := cmd.Start(); err != nil {
 		return err

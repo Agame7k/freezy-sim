@@ -7,18 +7,19 @@ registerPanel({
   id: "log",
   title: "Log",
   mount(el) {
-    const search = h("input", { type: "text", placeholder: "Filter text…", style: { flex: "1" } });
-    const level = h("select", h("option", { value: "" }, "All levels"), h("option", { value: "warn" }, "Warn+"),
+    const search = h("input", { type: "text", placeholder: "Filter text…", "aria-label": "Filter text", style: { flex: "1" } });
+    const level = h("select", { "aria-label": "Level" }, h("option", { value: "" }, "All levels"), h("option", { value: "warn" }, "Warn+"),
       h("option", { value: "error" }, "Errors"));
-    const source = h("select", h("option", { value: "" }, "All sources"));
+    const source = h("select", { "aria-label": "Source" }, h("option", { value: "" }, "All sources"));
     const autoscroll = h("input", { type: "checkbox", checked: true });
     const box = h("div.log", { style: { height: "calc(100vh - 220px)" } });
     const sources = new Set();
 
     el.append(
       h("div.row", { style: { marginBottom: "8px" } }, search, level, source,
-        h("label.check", autoscroll, "Follow"),
-        h("button.btn.sm", { onclick: () => { replace(box); } }, "Clear")),
+        h("label.check", { title: "Keep scrolled to the newest line" }, autoscroll, "Follow"),
+        h("button.btn.sm", { title: "Empty this view. Nothing is deleted: changing a filter brings the lines back.",
+          onclick: () => { replace(box); } }, "Clear")),
       box,
     );
 

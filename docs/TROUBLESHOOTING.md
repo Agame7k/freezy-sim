@@ -17,9 +17,10 @@ sandbox arena's state and its own log. Most problems are explained there in plai
 | "the setting "gui.port" should be a number (no quotes), not a string" | Remove the quotes around the number (`"port": 8090`) |
 | Warning "has a setting the simulator does not know, … so it is ignored" | A misspelled key. Check it against [CONFIGURATION.md](CONFIGURATION.md) |
 | Warning "Could not read saved robot designs (starting fresh) … kept as run/state.json.corrupt-…" | `run/state.json` was damaged (often by a crash or power cut during a save in an old version). The sim moved it aside and started fresh; the AI relearns over a few matches. Send the `.corrupt-` file with a bug report if it keeps happening |
-| An error event "Recovered from a crash: … (stack written to run/logs/panic-….txt)" | A bug in the sim. The affected part kept running or restarted itself. Please open an issue with that file (or press 🐞 **Report** for a bundle). A crash that repeats is reported once every 30 s, with a count |
+| An error event "Recovered from a crash: … (stack written to run/logs/panic-….txt)" | A bug in the sim. The affected part kept running or restarted itself. Please open an issue with that file (or press **Report** in the top bar for a bundle). A crash that repeats is reported once every 30 s, with a count |
 | "Go is not installed or not on PATH" | Install Go from [go.dev/dl](https://go.dev/dl/), then open a new terminal so the PATH updates. Or put a prebuilt `cheesy-arena.exe` in the arena folder |
 | The arena build fails | The Arena panel shows the compiler output. The first build downloads the arena's Go modules, so it needs internet once. Check that the arena builds on its own with `go build` in its folder |
+| "the sandbox folder's path is N characters long, and Windows can't start a program in a folder with a path longer than 258" | The sim is in a deeply nested folder (inside a long OneDrive path or an extracted zip). Move the sim folder somewhere short, such as `C:\freezy-sim`, or set `arena.sandboxDir` to a short folder ([CONFIGURATION.md](CONFIGURATION.md)) |
 | Template errors such as "can't evaluate field … in type" | The sim fell back to an **old prebuilt** `cheesy-arena.exe` in your arena folder that doesn't match the arena's current templates. Fix the build (install Go) or delete the stale exe |
 | "Windows protected your PC" | The exe isn't code-signed. Choose **More info → Run anyway**, or build it from source |
 | Antivirus quarantines `freezy-sim.exe` | Unsigned Go programs are sometimes flagged by heuristics. Build from source, or add an exception for the sim folder |
@@ -93,4 +94,4 @@ work there, but they are untested. Reports are welcome.
 In `run/` in the sim folder ([GETTING_STARTED.md](GETTING_STARTED.md#where-things-are-kept)). Delete it to start over.
 
 **How do I report a bug?**
-Open an issue and attach the bug-report bundle (the 🐞 button saves one). See [CONTRIBUTING.md](../CONTRIBUTING.md).
+Open an issue and attach the bug-report bundle (the **Report** button in the top bar saves one). See [CONTRIBUTING.md](../CONTRIBUTING.md).

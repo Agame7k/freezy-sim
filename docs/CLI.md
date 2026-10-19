@@ -79,7 +79,7 @@ Everything goes under `run/` in the sim folder. Times in file names are local, a
 | `run/reports/scouting-<time>.csv`, `picklist-<time>.csv` | Scouting before alliance selection |
 | `run/reports/<time>-<match>.json` | The auto-referee's report for each match |
 | `run/reports/ai-bench-<time>.html` and `.json`, `ai-baseline.json` | `-suite ai`; the baseline with `-bench-save-baseline` |
-| `run/reports/bundle-<time>.zip` | Bug-report bundles, saved on any failure or with the 🐞 button ([RECORDINGS.md](RECORDINGS.md#bug-report-bundles)) |
+| `run/reports/bundle-<time>.zip` | Bug-report bundles, saved on any failure or with the **Report** button in the top bar ([RECORDINGS.md](RECORDINGS.md#bug-report-bundles)) |
 | `run/recordings/*.fsr` | One recording per match, for the Replay panel |
 | `run/logs/freezy-sim-<date>.log`, `crash-<time>.txt` | The sim's log, one file per day, kept for two weeks; the stack of any recovered crash |
 

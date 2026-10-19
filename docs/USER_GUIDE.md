@@ -16,11 +16,23 @@ The **top bar** is always visible. It shows:
 - whether the field is ready to start. Hover over it to see what the arena is waiting for
 
 Its buttons are **Load test**, **Start**, **Abort**, **Commit**, and **Report**, which asks what went wrong and saves a
-bug-report bundle ([RECORDINGS.md](RECORDINGS.md#bug-report-bundles)).
+bug-report bundle ([RECORDINGS.md](RECORDINGS.md#bug-report-bundles)). The match buttons are greyed out while the arena
+is offline, and otherwise only the ones the arena accepts at that point in the match are enabled. For example,
+**Start** needs Field Ready and **Commit** waits for the match to end.
 
 If the sim loses the arena, or the arena can't start, a banner under the top bar says what is wrong and what is being
 done about it. When there is something for you to do, such as choosing the arena folder, the banner has a button that
 takes you there.
+
+### Buttons
+
+- **Hover over any button** to see what it does. Toggle buttons, such as a chute door or a driver station's Ethernet
+  cable, show what is true now ("Door closed", "Ethernet plugged in"), and the hover text says what a click will change.
+- **A greyed-out button can't work right now.** Examples are the match buttons while the arena is offline, or
+  **Reset sandbox DB** while the arena is running.
+- **Actions that can't be undone, or that take a while, ask first.** These are **Discard results**, **Reset sandbox
+  DB**, **Rebuild from source**, deleting a recording, removing the imported field CAD, and the AI panel's **Rebuild**,
+  **Forget** and **Reset learning**. Press **Esc** or **Cancel** to back out.
 
 ### The 3D venue
 
@@ -95,20 +107,20 @@ where you put each window.
 |---|---|
 | **Match** | Load and run matches, watch the arena's start blockers, run the [event director](#the-event-director), and see the **score check**: after every match, the arena's score is compared with what really happened on the field |
 | **Driver Stations** | See and break each of the 6 driver stations: power, radio, roboRIO, code, Ethernet, battery, packet loss and latency, legacy protocol, team override. Pop out a mock DS screen with its diagnostics tab |
-| **Robots** | Robot pose, hopper, AI state and faults. Take control of a robot ([below](#driving-a-robot)) |
+| **Robots** | Robot pose, hopper, AI state and faults. Take control of a robot ([below](#driving-a-robot)). Driving and the follow camera need the 3D view, so use them from the main window, not a popped-out panel |
 | **AI** | Robot designs, strategies, auto routines, team learning, match seeds (to replay a match's exact AI decisions), offline pre-season training, and toggles such as "Robots can tip over" |
 | **Field I/O** | Every PLC input, register and coil; the E-stop boxes; the PLC watchdog |
 | **Officials** | The AI head referee (fouls, cards, field signals) and the AI FTA (connection checklist, help for teams, auto-bypass) |
 | **Chaos** | Fault injection. Pick a level for random faults (Off, Occasional, Frequent or Mayhem: about 1.5, 3.5 or 7 problems a match), or inject one now: brownouts, radio reboots, code crashes, jams, tipping, E-stops, fouls. Each fault is followed by a **recovery check** that the arena handled it. With any level but Off there is also pre-match friction: teams late from queueing, no-shows, robots left switched off, E-stops left latched |
-| **Network** | The live field network: AP SSIDs and keys, switch VLANs, SCC state, and RF quality by robot position. Turn network security on or off, take a device offline, or add RF interference |
+| **Network** | The live field network: AP SSIDs and link quality, switch VLANs, SCC state, and RF quality by robot position. Turn network security on or off, take a device offline, or add RF interference |
 | **Displays** | Open any arena display in its own window, or a display wall |
 | **Inspector** | A packet log for every protocol, with filters and timing |
 | **Replay** | Play back match recordings and saved black boxes in 3D ([RECORDINGS.md](RECORDINGS.md)) |
 | **Match Log** | The auto-referee's settings and live log (with buttons to call a foul by hand), plus every saved match report |
-| **Arena** | The sandbox launcher (build, start, stop, restart, reset the database, choose or change the arena folder), the arena's log, the "configure arena for sim" settings, port problems, and remote access |
+| **Arena** | The sandbox launcher (build, start, stop, restart, reset the database while the arena is stopped, choose or change the arena folder), the arena's log, the "configure arena for sim" settings, port problems, and remote access |
 | **Log** | The sim's own event log |
 
-Every driver station has its own card in the **Driver Stations** panel, with the robot behind it. The 🖥 button on a
+Every driver station has its own card in the **Driver Stations** panel, with the robot behind it. The screen button on a
 card opens a mock Driver Station screen for that team, showing what its drivers would see:
 
 ![The Driver Stations panel during teleop](images/panel-ds.png)

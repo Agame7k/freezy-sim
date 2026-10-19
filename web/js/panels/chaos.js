@@ -24,6 +24,8 @@ registerPanel({
         h("h3", "Random problems", h("span.grow"), state.pending ? tag(`${state.pending} pending this match`, "warn") : null),
         h("div.row.wrap",
           LEVELS.map((label, level) => h("button.btn.sm", { class: state.level === level ? "on" : "",
+            "aria-pressed": String(state.level === level),
+            title: level ? "Random problems are drawn when each match starts" : "No random problems",
             onclick: () => run("chaos.config", { level }) }, label))),
         h("label.check.small", { style: { marginTop: "6px" } },
           h("input", { type: "checkbox", checked: state.reveal, onchange: (e) => run("chaos.config", { reveal: e.target.checked }) }),
@@ -46,7 +48,8 @@ registerPanel({
           Object.entries(groups).map(([category, types]) => h("div", { style: { marginBottom: "6px" } },
             h("div.small.muted", category),
             h("div.row.wrap", types.map((t) => h("button.btn.sm", {
-              title: t.autoOnly ? "Most realistic during auto" : "",
+              title: `Make this happen now to ${target === "random" ? "a random robot" : target}` +
+                (t.autoOnly ? " (most realistic during AUTO)" : ""),
               onclick: () => run("chaos.inject", { type: t.id, station: target }),
             }, t.label))))));
       }
@@ -72,7 +75,8 @@ registerPanel({
       setBadge(history.length && history.length !== lastHistory ? String(history.length) : "");
       lastHistory = history.length;
       replace(historyCard,
-        h("h3", "What went wrong", h("span.grow"), h("button.btn.sm", { onclick: () => run("chaos.clearHistory") }, "Clear")),
+        h("h3", "What went wrong", h("span.grow"), h("button.btn.sm", { title: "Empty this list",
+          onclick: () => run("chaos.clearHistory") }, "Clear")),
         history.length ? h("div.log", { style: { height: "260px" } },
           history.slice().reverse().map((r) => h("div.line.lvl-warn",
             h("span.t", new Date(r.time).toLocaleTimeString([], { hour12: false })),

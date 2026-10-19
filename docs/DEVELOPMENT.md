@@ -118,7 +118,15 @@ target open.
 System). For icons, use `icon(name)` from `core/icons.js`, never emoji or symbol characters, which look different on
 every PC; add a Lucide path there if one is missing. For questions, use `ask()` and `confirmAction()` from
 `core/dom.js`, never the browser's `prompt()` or `confirm()`, and pass `danger: true` for anything that deletes or
-can't be undone. One `primary` (or `go`) button per card at most; the rest stay plain. Put controls under a card's
+can't be undone. `cmdButton(label, command, args, cls, { title, confirm })` does both for a command button.
+
+Every button gets a `title` that says what a click does. An icon-only button also gets an `aria-label`. A toggle shows
+the current state in its label ("Door closed"), sets `aria-pressed`, and says in its `title` what a click will change.
+Disable a button when it can't work (the arena is offline, the wrong match state), rather than letting the click fail.
+Catch every `cmd()` and `toast()` the error, so a failed click never looks like nothing happened. Something that needs
+the 3D view (`window.venue`) must say so when it runs in a popped-out panel, which has no 3D view.
+
+One `primary` (or `go`) button per card at most; the rest stay plain. Put controls under a card's
 `h3`, not in it, unless it is a single small control. A table with more than five columns gets the `wide` class, so it
 scrolls sideways in a narrow dock instead of squeezing its cells.
 
