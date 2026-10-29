@@ -419,6 +419,28 @@ func allBuilds() []Build {
 
 var kitBuilds = allBuilds()
 
+// ModelSpecs lists every robot the 3D view may have to draw: the model of each build in the kit, and the same builds
+// on the West Coast and kit drives that older saves used (where those pass inspection). The web package's robot
+// model test draws them all.
+func ModelSpecs() []ModelSpec {
+	var specs []ModelSpec
+	seen := map[ModelSpec]bool{}
+	for _, b := range kitBuilds {
+		for _, drive := range []string{b.Drive, "tank", "kop"} {
+			b.Drive = drive
+			if ok, _ := b.legal(); !ok {
+				continue
+			}
+			spec := b.Archetype().Model
+			if !seen[spec] {
+				seen[spec] = true
+				specs = append(specs, spec)
+			}
+		}
+	}
+	return specs
+}
+
 // designRobot is a team's build season: of the builds it can afford, the one it thinks is worth the most, with
 // the team's own taste mixed in (teams do not all agree on what wins).
 func designRobot(team int, others []Archetype) (Build, string) {

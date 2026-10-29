@@ -35,17 +35,28 @@ const TUBE = 0.025;
 // Powder-coat colors teams pick (chosen per team).
 const ACCENTS = [0x1c1d21, 0x3b4048, 0x7a1418, 0x123f7e, 0xd2a019, 0x1f6b33, 0xe0600a, 0x5a2a82, 0x2a7f8a, 0xb8bcc4];
 
-function bumperTexture(team, alliance) {
+// Bumper cloth: the deep red and royal blue teams actually buy (the field's alliance colors are brighter).
+const BUMPER_FABRIC = { red: 0xa3121a, blue: 0x0f3384 };
+
+/** White team numbers printed straight onto the bumper cloth (R405), on a transparent canvas. */
+function drawNumber(panel, team) {
+  panel.g.clearRect(0, 0, panel.canvas.width, panel.canvas.height);
+  panel.last = null;
+  panel.text(String(team || ""), { fg: "#f4f4f2", bg: "rgba(0,0,0,0)", font: "bold 84px 'Arial Black', 'Segoe UI', sans-serif" });
+}
+
+function bumperTexture(team) {
   const panel = new CanvasPanel(512, 96);
-  panel.text(String(team || ""), { fg: "#ffffff", bg: alliance === "red" ? "#b81d22" : "#1a4fb8",
-    font: "bold 78px 'Segoe UI', sans-serif" });
+  drawNumber(panel, team);
   return panel;
 }
 
 function materials(team, alliance) {
   const accent = ACCENTS[Math.abs((team * 2654435761) >>> 0) % ACCENTS.length];
   return {
-    tube: new THREE.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.75, roughness: 0.35 }),
+    // Pre-drilled 1x1 / 2x1 tube (holes every 1/2 in); the UVs of tube boxes are in meters (see box()).
+    tube: new THREE.MeshStandardMaterial({ color: 0xa4aab2, metalness: 0.75, roughness: 0.35, map: holeTexture(),
+      userData: { meterUV: true } }),
     darkTube: new THREE.MeshStandardMaterial({ color: 0x2d3036, metalness: 0.55, roughness: 0.45 }),
     plate: new THREE.MeshStandardMaterial({ color: accent, metalness: 0.35, roughness: 0.45 }),
     poly: new THREE.MeshPhysicalMaterial({ color: 0xdfe9f5, roughness: 0.06, transparent: true, opacity: 0.18,
@@ -56,26 +67,55 @@ function materials(team, alliance) {
     rubber: new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.95 }),
     tread: new THREE.MeshStandardMaterial({ color: 0x262626, roughness: 0.9, bumpMap: treadTexture(), bumpScale: 3 }),
     compliant: new THREE.MeshStandardMaterial({ color: 0x23a35f, roughness: 0.85 }),
-    flywheel: new THREE.MeshStandardMaterial({ color: 0x2b2b2e, metalness: 0.5, roughness: 0.4 }),
     belt: new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.8 }),
     sheet: new THREE.MeshStandardMaterial({ color: 0x8c929b, metalness: 0.7, roughness: 0.35 }),
-    fabric: new THREE.MeshStandardMaterial({ color: allianceColor(alliance), roughness: 0.95, bumpMap: weaveTexture(),
-      bumpScale: 1.5 }),
+    fabric: new THREE.MeshStandardMaterial({ color: BUMPER_FABRIC[alliance] ?? allianceColor(alliance), roughness: 0.95,
+      bumpMap: weaveTexture(), bumpScale: 1.5 }),
     hub: new THREE.MeshStandardMaterial({ color: 0xb9bec6, metalness: 0.8, roughness: 0.3 }),
+    redWire: new THREE.MeshStandardMaterial({ color: 0xb3161b, roughness: 0.55 }),
+    blackWire: new THREE.MeshStandardMaterial({ color: 0x121214, roughness: 0.55 }),
+    canWire: new THREE.MeshStandardMaterial({ color: 0xd8c21a, roughness: 0.6 }),
   };
 }
 
 // ---- Small builders (robot frame: +x forward / intake side, +y up, +z the robot's left) -------------------------
 
 function box(parent, w, h, d, material, x, y, z) {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+  const geometry = new THREE.BoxGeometry(w, h, d);
+  if (material.userData.meterUV) {
+    // BoxGeometry maps 0..1 across every face. Remap so u runs along the face's long side in 1/2 in steps and v
+    // across it in 1 in steps, both from the face's center: one centered row of holes on a 1 in face, two on a 2 in.
+    const uv = geometry.attributes.uv;
+    const faces = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]]; // +x, -x, +y, -y, +z, -z
+    for (let i = 0; i < uv.count; i++) {
+      const [su, sv] = faces[Math.floor(i / 4)];
+      let along = (uv.getX(i) - 0.5) * su;
+      let across = (uv.getY(i) - 0.5) * sv;
+      if (sv > su) [along, across] = [across, along];
+      uv.setXY(i, along / 0.0127 + 0.5, across / 0.0254 + (Math.min(su, sv) > 0.04 ? 0 : 0.5));
+    }
+  }
+  const mesh = new THREE.Mesh(geometry, material);
   mesh.position.set(x, y, z);
   parent.add(mesh);
   return mesh;
 }
 
+/** A wire (or a bundle) along a smooth path through points [x, y, z]. */
+function wire(parent, points, radius, material) {
+  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+  const mesh = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(8, points.length * 6), radius, 6), material);
+  parent.add(mesh);
+  return mesh;
+}
+
 function cylinder(parent, radius, length, material, axis, x, y, z, segments = 16) {
-  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, length, segments), material);
+  const geometry = new THREE.CylinderGeometry(radius, radius, length, segments);
+  if (material.userData.meterUV) {
+    const uv = geometry.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i) * length / 0.0127, uv.getX(i) * 2 * Math.PI * radius / 0.0254);
+  }
+  const mesh = new THREE.Mesh(geometry, material);
   if (axis === "z") mesh.rotation.x = Math.PI / 2;
   if (axis === "x") mesh.rotation.z = Math.PI / 2;
   mesh.position.set(x, y, z);
@@ -141,7 +181,7 @@ function tubeCage(parent, material, x0, x1, y0, y1, z0, z1, { bottom = false } =
 
 // ---- Subsystems ----------------------------------------------------------------------------------------------
 
-function driveBase(body, spec, m, parts) {
+function driveBase(body, spec, m, parts, team) {
   const f = spec.frame;
   const half = f / 2;
   // 2x1 perimeter, cross members, belly pan.
@@ -173,24 +213,36 @@ function driveBase(body, spec, m, parts) {
     }
   };
   if (spec.drive === "swerve") {
-    // Four swerve modules in the corners: wheel under a module plate, drive and steer motors on top, belt cover.
+    // Four COTS swerve modules in the corners, bolted into the frame rails. The housing stays put: a pre-drilled top
+    // plate with the drive and steer motors standing on it (one belt-coupled under a team-colored cover), and the
+    // absolute encoder in the middle. Under it, the fork (two side plates round the wheel) turns on the big bearing.
+    const style = (Math.abs(team * 40503) >>> 0) % 2; // drive motor beside the steer motor, or behind it
     for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-      const module = new THREE.Group();
-      module.position.set(sx * (half - 0.075), 0, sz * (half - 0.075));
-      box(module, 0.13, 0.008, 0.13, m.tube, 0, 0.105, 0);
-      const fork = box(module, 0.075, 0.06, 0.012, m.darkTube, 0, 0.075, 0.03);
-      fork.userData.fork = true;
-      box(module, 0.075, 0.06, 0.012, m.darkTube, 0, 0.075, -0.03);
-      const wheel = cylinder(module, 0.051, 0.038, m.tread, "z", 0, 0.051, 0, 20);
-      cylinder(module, 0.03, 0.04, m.tube, "z", 0, 0.051, 0, 12);
-      motor(module, m, "y", 0.03, 0.15, 0.025, 0.08);
-      motor(module, m, "y", -0.032, 0.14, -0.028, 0.06, 0.026);
-      box(module, 0.12, 0.016, 0.09, m.plate, 0, 0.118, 0); // belt cover in the team color
-      cylinder(module, 0.048, 0.01, m.darkTube, "y", 0, 0.1, 0, 28); // steering ring gear
-      body.add(module);
+      const housing = new THREE.Group();
+      housing.position.set(sx * (half - 0.075), 0, sz * (half - 0.075));
+      box(housing, 0.13, 0.008, 0.13, m.tube, 0, 0.105, 0);
+      box(housing, 0.13, 0.01, 0.012, m.darkTube, 0, 0.096, sz * 0.059); // the edges that sit on the frame rails
+      box(housing, 0.012, 0.01, 0.13, m.darkTube, sx * 0.059, 0.096, 0);
+      cylinder(housing, 0.05, 0.012, m.darkTube, "y", 0, 0.094, 0, 28); // bearing race
+      const [dx, dz] = style ? [-0.032, -0.026] : [-0.034, 0.03];
+      motor(housing, m, "y", 0.03, 0.152, 0.024, 0.075);
+      motor(housing, m, "y", dx, 0.143, dz, 0.06, 0.026);
+      box(housing, 0.075, 0.014, 0.05, m.plate, 0.012, 0.117, 0.02); // pulley cover
+      box(housing, 0.026, 0.012, 0.026, m.motor, -0.02, 0.115, -0.03); // CANcoder
+      box(housing, 0.018, 0.001, 0.012, m.motorCap, -0.02, 0.1215, -0.03);
+      const steer = new THREE.Group();
+      housing.add(steer);
+      for (const s of [-1, 1]) {
+        const plate = sidePlate(steer, 0.1, 0.07, m.darkTube, 0, 0.061, s * 0.026, 0.005);
+        plate.userData.fork = true;
+      }
+      box(steer, 0.05, 0.008, 0.058, m.darkTube, 0, 0.088, 0); // fork crossbar under the bearing
+      const wheel = cylinder(steer, 0.051, 0.038, m.tread, "z", 0, 0.051, 0, 20);
+      cylinder(steer, 0.012, 0.06, m.motorCap, "z", 0, 0.051, 0, 10); // axle
+      body.add(housing);
       spoke(wheel, 0.051);
       parts.wheels.push({ wheel, radius: 0.051, side: 0 });
-      parts.modules.push({ group: module, wheel, x: module.position.x, z: module.position.z, angle: 0, direction: 1 });
+      parts.modules.push({ group: steer, wheel, x: housing.position.x, z: housing.position.z, angle: 0, direction: 1 });
     }
   } else {
     // West Coast tank (or the KOP chassis): six wheels per side with the center pair dropped, gearboxes mid-side.
@@ -203,8 +255,8 @@ function driveBase(body, spec, m, parts) {
         box(body, f - 0.04, 0.05, TUBE, m.tube, 0, 0.075, s * (half - 0.07));
       }
       for (const [i, x] of [-1, 0, 1].entries()) {
-        const drop = i === 1 ? 0.004 : 0;
-        const wheel = cylinder(body, 0.052, 0.04, m.tread, "z", x * (half - 0.11), 0.052 - drop, s * (half - 0.045), 20);
+        const lift = i === 1 ? 0 : 0.004; // the center pair is dropped: the outer wheels ride just off the carpet
+        const wheel = cylinder(body, 0.052, 0.04, m.tread, "z", x * (half - 0.11), 0.052 + lift, s * (half - 0.045), 20);
         spoke(wheel, 0.052);
         parts.wheels.push({ wheel, radius: 0.052, side: s }); // side -1 is the robot's left (-z), +1 its right
       }
@@ -215,12 +267,35 @@ function driveBase(body, spec, m, parts) {
     }
   }
   // Electronics under the superstructure: battery, roboRIO, PDH (with its breakers), radio.
-  box(body, 0.18, 0.17, 0.08, m.motor, -0.12 * f, 0.14, -0.26 * f);
-  box(body, 0.06, 0.02, 0.03, new THREE.MeshStandardMaterial({ color: 0xc81e1e }), -0.12 * f, 0.235, -0.26 * f);
+  const battery = { x: -0.12 * f, z: -0.26 * f };
+  const pdh = { x: -0.18 * f, z: 0.24 * f };
+  box(body, 0.18, 0.17, 0.08, m.motor, battery.x, 0.14, battery.z);
+  for (const s of [-1, 1]) { // the white label band on both faces, and a velcro strap over the top
+    box(body, 0.16, 0.06, 0.002, new THREE.MeshStandardMaterial({ color: 0xe4e2da, roughness: 0.7 }), battery.x, 0.15,
+      battery.z + s * 0.041);
+  }
+  box(body, 0.03, 0.002, 0.084, m.motor, battery.x + 0.04, 0.226, battery.z);
+  box(body, 0.06, 0.02, 0.03, new THREE.MeshStandardMaterial({ color: 0xc81e1e }), battery.x, 0.235, battery.z);
   box(body, 0.14, 0.03, 0.1, new THREE.MeshStandardMaterial({ color: 0xe8e8e4, roughness: 0.5 }), 0.02 * f, 0.065, 0.24 * f);
-  box(body, 0.2, 0.04, 0.09, new THREE.MeshStandardMaterial({ color: 0x1c1f24 }), -0.18 * f, 0.07, 0.24 * f);
-  box(body, 0.18, 0.012, 0.02, new THREE.MeshStandardMaterial({ color: 0xf6a823 }), -0.18 * f, 0.095, 0.24 * f);
+  box(body, 0.2, 0.04, 0.09, new THREE.MeshStandardMaterial({ color: 0x1c1f24 }), pdh.x, 0.07, pdh.z);
+  box(body, 0.18, 0.012, 0.02, new THREE.MeshStandardMaterial({ color: 0xf6a823 }), pdh.x, 0.095, pdh.z);
   box(body, 0.1, 0.03, 0.07, new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.5 }), -0.36 * f, 0.065, -0.05);
+  // 6 AWG battery leads (through the Anderson connector and main breaker) to the PDH.
+  for (const [dz, material] of [[0.008, m.redWire], [-0.008, m.blackWire]]) {
+    wire(body, [[battery.x, 0.245, battery.z + dz], [battery.x - 0.03, 0.2, battery.z + 0.08], [pdh.x + 0.06, 0.075,
+      pdh.z - 0.12 + dz], [pdh.x + 0.06, 0.07, pdh.z - 0.045 + dz]], 0.0055, material);
+  }
+  // Motor power from the PDH and the yellow CAN daisy chain to every module or gearbox, along the belly pan.
+  const drops = spec.drive === "swerve"
+    ? [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([sx, sz]) => [sx * (half - 0.075), sz * (half - 0.075)])
+    : [[0, half - 0.16], [0, -(half - 0.16)]];
+  drops.forEach(([x, z], i) => {
+    const from = [pdh.x + (i - 1.5) * 0.04, 0.06, pdh.z - 0.045];
+    const run = [from, [from[0], 0.058, z * 0.45], [x * 0.85, 0.06, z * 0.8], [x, 0.13, z]];
+    wire(body, run, 0.0028, m.redWire);
+    wire(body, run.map(([px, py, pz]) => [px + 0.006, py, pz]), 0.0028, m.blackWire);
+    wire(body, run.map(([px, py, pz]) => [px - 0.008, py + 0.002, pz]), 0.0018, m.canWire);
+  });
 }
 
 /** One bumper side: pool noodles under fabric, so the outer face is rounded top and bottom with a flat band
@@ -257,14 +332,11 @@ function bumpers(body, spec, m, team, alliance, parts) {
     segment.rotation.y = angle;
     body.add(segment);
     parts.bumpers.push(segment);
-    // Plywood backing visible on top, and the white team number.
-    const backing = new THREE.Mesh(new THREE.BoxGeometry(f, 0.004, 0.02), new THREE.MeshStandardMaterial({ color: 0xc9a46b }));
-    backing.position.set(Math.sin(angle) * (f / 2 + 0.01), BUMPER_Z + BUMPER_H + 0.002, Math.cos(angle) * (f / 2 + 0.01));
-    backing.rotation.y = angle;
-    body.add(backing);
-    const panel = bumperTexture(team, alliance);
-    const label = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(f * 0.7, 0.5), BUMPER_H * 0.68),
-      new THREE.MeshBasicMaterial({ map: panel.texture }));
+    // The white team number, printed on the cloth (the cloth wraps the plywood, so no wood shows).
+    const panel = bumperTexture(team);
+    const label = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(f * 0.8, 0.56), BUMPER_H * 0.76),
+      new THREE.MeshStandardMaterial({ map: panel.texture, transparent: true, roughness: 0.9, polygonOffset: true,
+        polygonOffsetFactor: -2 }));
     label.position.set(Math.sin(angle) * (offset + BUMPER_T / 2 + 0.002), y, Math.cos(angle) * (offset + BUMPER_T / 2 + 0.002));
     label.rotation.y = angle;
     body.add(label);
@@ -281,32 +353,55 @@ function bumpers(body, spec, m, team, alliance, parts) {
 }
 
 /** Over-the-bumper intake: side plates on a pivot at the top front of the frame, a compliant-wheel roller and a
- * polycord top roller. Deployed it reaches past the bumper to the carpet; stowed it folds up inside the perimeter. */
+ * polycord top roller, the motor inboard. Deployed it reaches past the bumper to the carpet; stowed it folds up inside
+ * the perimeter. An intake wider than the frame (spec.intake > 1) gets roller extensions that slide out of the ends
+ * as it deploys, so it still starts inside the frame. */
 function intake(body, spec, m, parts) {
   const f = spec.frame;
   const width = f * spec.intake;
+  const core = Math.min(width, f - 0.06); // between the side plates, inside the frame rails
   const pivot = new THREE.Group();
   pivot.position.set(f / 2 - 0.04, 0.24, 0);
   const reach = 0.26;
   const drop = -0.17;
   for (const s of [-1, 1]) {
-    const arm = sidePlate(pivot, Math.hypot(reach, drop), 0.055, m.plate, reach / 2, drop / 2, s * width / 2);
+    const arm = sidePlate(pivot, Math.hypot(reach, drop), 0.055, m.plate, reach / 2, drop / 2, s * core / 2);
     arm.rotation.z = Math.atan2(drop, reach);
   }
-  const roller = cylinder(pivot, 0.016, width, m.tube, "z", reach, drop, 0, 10);
-  const count = Math.max(5, Math.round(width / 0.1));
-  for (let i = 0; i < count; i++) {
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.028, 14), m.compliant);
-    wheel.position.y = -width / 2 + ((i + 0.5) * width) / count; // along the roller's own axis
-    roller.add(wheel);
+  const roller = cylinder(pivot, 0.016, core, m.tube, "z", reach, drop, 0, 10);
+  const wheels = (shaft, span, from) => {
+    const count = Math.max(1, Math.round(span / 0.1));
+    for (let i = 0; i < count; i++) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.028, 14), m.compliant);
+      wheel.position.y = from + ((i + 0.5) * span) / count; // along the roller's own axis
+      shaft.add(wheel);
+    }
+  };
+  wheels(roller, core, -core / 2);
+  parts.intakeWings = [];
+  const extra = (width - core) / 2;
+  if (extra > 0.01) {
+    const length = extra + 0.04;
+    for (const s of [-1, 1]) {
+      const wing = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, length, 10), m.motorCap);
+      wheels(wing, length, -length / 2);
+      roller.add(wing);
+      parts.intakeWings.push({ wing, stowed: s * (core / 2 - 0.005 - length / 2), deployed: s * (width / 2 - length / 2) });
+    }
   }
-  cylinder(pivot, 0.018, width * 0.96, m.belt, "z", reach * 0.55, drop * 0.45, 0, 10);
-  motor(pivot, m, "z", reach * 0.5, drop * 0.5 + 0.03, width / 2 + 0.05, 0.07);
+  cylinder(pivot, 0.018, core - 0.22, m.belt, "z", reach * 0.55, drop * 0.45, 0, 10);
+  motor(pivot, m, "z", reach * 0.5, drop * 0.5 + 0.03, core / 2 - 0.06, 0.07);
   body.add(pivot);
   parts.intake = pivot;
   parts.intakeRoller = roller;
-  parts.intakeStowed = 1.05; // radians folded up, inside the frame perimeter
+  // Stowed it folds up and back inside the frame perimeter (R105) and under the robot's height: upright where
+  // the robot is tall enough, leaning back over the hopper where it isn't.
+  const length = Math.hypot(reach, drop);
+  const headroom = Math.min(spec.height, MAX_HEIGHT) - pivot.position.y - 0.06; // room for the roller's wheels
+  const stowedAngle = Math.max(Math.PI / 2 + 0.15, Math.PI - Math.asin(Math.max(0, Math.min(1, headroom / length))));
+  parts.intakeStowed = stowedAngle - Math.atan2(drop, reach); // radians the pivot turns from deployed
   pivot.rotation.z = parts.intakeStowed;
+  for (const { wing, stowed } of parts.intakeWings) wing.position.y = stowed;
 }
 
 /** A hopper's walls in the robot frame (x forward, left, up): mirrors hopperShape in internal/world/hopper.go, where
@@ -333,7 +428,7 @@ export function hopperShape(spec) {
 
 /** Hopper: polycarbonate walls on a 1x1 tube cage over an indexer floor (belt rollers feeding the shooter). Behind
  * the shooter's front edge the walls stop under the shooter. */
-function hopper(body, spec, m, parts) {
+function hopper(body, spec, m, parts, team) {
   const shape = hopperShape(spec);
   const { back, front, halfWidth, floor } = shape;
   const length = front - back;
@@ -359,6 +454,19 @@ function hopper(body, spec, m, parts) {
   box(body, 0.004, tall * 0.45, halfWidth * 2, m.poly, front, floor + tall * 0.225, 0);
   tubeCage(body, m.tube, split, front, floor, shape.ceiling, -halfWidth, halfWidth);
   parts.hopperShape = shape;
+  // The team number in white vinyl on both side walls, where the wall is big enough to carry it.
+  const decalW = Math.min(front - split - 0.05, 0.26);
+  const decalH = Math.min(decalW * 0.3, tall * 0.35);
+  if (decalW < 0.1 || decalH < 0.035) return;
+  for (const s of [-1, 1]) {
+    const panel = bumperTexture(team);
+    const decal = new THREE.Mesh(new THREE.PlaneGeometry(decalW, decalH), new THREE.MeshStandardMaterial({
+      map: panel.texture, transparent: true, roughness: 0.5, depthWrite: false }));
+    decal.position.set((front + split) / 2, shape.ceiling - decalH / 2 - 0.025, s * (halfWidth + 0.003));
+    if (s < 0) decal.rotation.y = Math.PI;
+    body.add(decal);
+    parts.numberPanels.push(panel);
+  }
 }
 
 const FUEL_D = 0.15;
@@ -379,26 +487,56 @@ function hopperRest(shape, k) {
   };
 }
 
+// Flywheel wheels teams run: black Stealth, orange or blue compliant, grey urethane.
+const FLYWHEEL_COLORS = [0x2b2b2e, 0xe0701c, 0x2f5fb8, 0x8a8f96];
+
 /** Shooter between two side plates at the back: flywheels on a shaft under a hood, a feeder roller, motors
- * outboard. lanes FUEL wide, each lane a ball width plus dividers. Returns the group (for turret mounting). */
-function shooter(spec, m, lanes) {
+ * outboard (on the shaft, or belted to it from below). lanes FUEL wide, each lane a ball width plus dividers.
+ * Returns the group (for turret mounting). */
+function shooter(spec, m, lanes, team) {
   const group = new THREE.Group();
   const laneWidth = 0.18;
   const width = Math.max(0.2, lanes * laneWidth);
   const plateH = 0.26;
   const plateL = 0.3;
+  const pick = Math.abs(team * 2246822519) >>> 0;
+  const belted = pick % 2 === 1;
+  const wheelMaterial = new THREE.MeshStandardMaterial({ color: FLYWHEEL_COLORS[(pick >>> 3) % FLYWHEEL_COLORS.length],
+    roughness: 0.6, metalness: 0.1 });
+  const shaft = { x: -0.07, y: plateH - 0.08 };
   for (const s of [-1, 1]) {
     const plate = sidePlate(group, plateL, plateH, m.plate, 0, plateH / 2, s * (width / 2 + 0.004));
     plate.userData.sidePlate = true;
-    motor(group, m, "z", -0.06, plateH - 0.08, s * (width / 2 + 0.05), 0.075);
+    if (!belted) {
+      motor(group, m, "z", shaft.x + 0.01, shaft.y, s * (width / 2 + 0.05), 0.075);
+      continue;
+    }
+    // A motor low on the plate, belted up to the flywheel shaft (pulleys and a belt outside the plate).
+    const low = { x: -0.1, y: 0.075 };
+    motor(group, m, "z", low.x, low.y, s * (width / 2 + 0.06), 0.075);
+    const z = s * (width / 2 + 0.017);
+    const big = 0.03;
+    const small = 0.02;
+    cylinder(group, big, 0.014, m.hub, "z", shaft.x, shaft.y, z, 20);
+    cylinder(group, small, 0.014, m.hub, "z", low.x, low.y, z, 16);
+    const dx = shaft.x - low.x;
+    const dy = shaft.y - low.y;
+    const span = Math.hypot(dx, dy);
+    const along = Math.atan2(dy, dx);
+    for (const side of [-1, 1]) {
+      const r = (big + small) / 2 + 0.002;
+      const run = box(group, span, 0.003, 0.012, m.belt, (shaft.x + low.x) / 2 - side * Math.sin(along) * r,
+        (shaft.y + low.y) / 2 + side * Math.cos(along) * r, z);
+      run.rotation.z = along;
+    }
   }
   // Flywheel shaft with one pair of wheels per lane.
   const flywheels = new THREE.Group();
-  flywheels.position.set(-0.07, plateH - 0.08, 0);
+  flywheels.position.set(shaft.x, shaft.y, 0);
   for (let lane = 0; lane < lanes; lane++) {
     const z = -width / 2 + (lane + 0.5) * (width / lanes);
     for (const dz of [-0.04, 0.04]) {
-      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 20), m.flywheel);
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 20), wheelMaterial);
       wheel.rotation.x = Math.PI / 2;
       wheel.position.z = z + dz;
       flywheels.add(wheel);
@@ -407,11 +545,12 @@ function shooter(spec, m, lanes) {
   }
   cylinder(flywheels, 0.008, width, m.motorCap, "z", 0, 0, 0, 8);
   group.add(flywheels);
-  // Hood: a curved sheet over the flywheels that sets the launch angle.
-  const hood = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, width, 20, 1, true, Math.PI * 0.05, Math.PI * 0.75),
-    new THREE.MeshStandardMaterial({ color: 0x2b2f36, metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide }));
+  // Hood: a curved smoked-polycarbonate sheet over the flywheels that sets the launch angle (the wheels show through).
+  const hood = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, width, 20, 1, true, Math.PI * 0.05, Math.PI * 0.6),
+    new THREE.MeshPhysicalMaterial({ color: 0x3a4048, roughness: 0.15, transparent: true, opacity: 0.55,
+      depthWrite: false, side: THREE.DoubleSide }));
   hood.rotation.x = Math.PI / 2;
-  hood.position.set(-0.07, plateH - 0.08, 0);
+  hood.position.set(shaft.x, shaft.y, 0);
   group.add(hood);
   // Feeder roller from the indexer.
   const feeder = cylinder(group, 0.025, width * 0.95, m.compliant, "z", 0.06, plateH * 0.45, 0, 12);
@@ -440,7 +579,10 @@ function climber(body, spec, m, parts) {
     group.add(arm);
   }
   motor(group, m, "z", -0.04, 0.03, 0, 0.09);
-  group.rotation.z = Math.PI / 2 - 0.15; // stowed lying back over the frame
+  // Stowed lying back over the frame, but no further back than the frame's back rail (long arms stay tilted up).
+  const room = group.position.x + f / 2 - 0.04;
+  parts.climberStowed = Math.min(Math.PI / 2 - 0.15, Math.asin(Math.min(1, room / (armLength + 0.04))));
+  group.rotation.z = parts.climberStowed;
   body.add(group);
   parts.climber = group;
   parts.climberRest = 1;
@@ -476,13 +618,13 @@ export function createRobot({ team = 0, alliance = "blue", archetype = "scorer",
   const top = Math.min(spec.height, MAX_HEIGHT);
   const parts = { spec };
 
-  driveBase(body, spec, m, parts);
+  driveBase(body, spec, m, parts, team);
   bumpers(body, spec, m, team, alliance, parts);
   intake(body, spec, m, parts);
 
   // Superstructure by design.
   if (spec.shooter === "turret") {
-    hopper(body, spec, m, parts);
+    hopper(body, spec, m, parts, team);
     // Turntable on a deck over the back of the hopper, the shooter riding on it.
     const deckY = top - 0.17;
     box(body, 0.34, 0.008, 0.34, m.darkTube, -0.18 * f, deckY, 0);
@@ -492,7 +634,7 @@ export function createRobot({ team = 0, alliance = "blue", archetype = "scorer",
     ring.rotation.x = Math.PI / 2;
     turret.add(ring);
     box(turret, 0.3, 0.008, 0.28, m.plate, 0, 0.006, 0);
-    const shot = shooter(spec, m, spec.lanes);
+    const shot = shooter(spec, m, spec.lanes, team);
     shot.group.scale.setScalar(0.62);
     shot.group.position.y = 0.01;
     turret.add(shot.group);
@@ -520,9 +662,9 @@ export function createRobot({ team = 0, alliance = "blue", archetype = "scorer",
     parts.flywheel = flywheels;
     parts.hopperShape = hopperShape(spec);
   } else {
-    hopper(body, spec, m, parts);
+    hopper(body, spec, m, parts, team);
     const lanes = spec.shooter === "small" ? 1 : spec.lanes;
-    const shot = shooter(spec, m, lanes);
+    const shot = shooter(spec, m, lanes, team);
     const scale = spec.shooter === "small" ? 0.7 : 1;
     shot.group.scale.setScalar(scale);
     // Mount the shooter at the back so its top is at the robot height.
@@ -579,10 +721,7 @@ export function createRobot({ team = 0, alliance = "blue", archetype = "scorer",
     setTeam(newTeam) {
       if (newTeam === robot.team) return;
       robot.team = newTeam;
-      for (const panel of parts.numberPanels) {
-        panel.text(String(newTeam || ""), { fg: "#ffffff", bg: alliance === "red" ? "#b81d22" : "#1a4fb8",
-          font: "bold 78px 'Segoe UI', sans-serif" });
-      }
+      for (const panel of parts.numberPanels) drawNumber(panel, newTeam);
       root.traverse((child) => {
         if (child.userData.pick) child.userData.pick.label = `${newTeam} (${alliance})`;
         if (child.userData.pick) child.userData.pick.team = newTeam;
@@ -591,12 +730,13 @@ export function createRobot({ team = 0, alliance = "blue", archetype = "scorer",
     /** Intake deploy (0 stowed .. 1 deployed), eased by the caller. */
     setIntake(amount) {
       parts.intake.rotation.z = parts.intakeStowed * (1 - amount);
+      for (const { wing, stowed, deployed } of parts.intakeWings) wing.position.y = stowed + (deployed - stowed) * amount;
     },
     /** Climber: 0 stowed, 1 hooks up at the rung (the arm swings upright; the robot lifts itself). */
     setClimb(amount) {
       if (Math.abs(amount - climbShown) < 0.001) return;
       climbShown = amount;
-      if (parts.climber) parts.climber.rotation.z = (Math.PI / 2 - 0.15) * (1 - amount);
+      if (parts.climber) parts.climber.rotation.z = (parts.climberStowed ?? 0) * (1 - amount);
     },
     /**
      * Animates the mechanisms for one frame. v: { forward, left } m/s in the robot frame; omega rad/s (CCW from above);
@@ -716,6 +856,28 @@ function weaveTexture() {
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(110, 110); // the extruded bumper's UVs are in meters
   weaveTexture.cached = texture;
+  return texture;
+}
+
+/** Pre-drilled tube: one tile is 1/2 in along the tube by 1 in across (see box()) with a 0.2 in hole in the middle,
+ * dark where the tube is hollow. */
+function holeTexture() {
+  if (holeTexture.cached) return holeTexture.cached;
+  const canvas = document.createElement("canvas");
+  canvas.width = 32;
+  canvas.height = 64;
+  const g = canvas.getContext("2d");
+  g.fillStyle = "#ffffff";
+  g.fillRect(0, 0, 32, 64);
+  g.fillStyle = "#1e2024";
+  g.beginPath();
+  g.arc(16, 32, 6.5, 0, Math.PI * 2);
+  g.fill();
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.anisotropy = 4;
+  holeTexture.cached = texture;
   return texture;
 }
 

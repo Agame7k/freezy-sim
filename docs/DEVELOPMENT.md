@@ -57,6 +57,13 @@ go test ./...
 `gofmt -l` must print nothing. The unit tests need no arena. They take about a minute and a half, most of it the
 physics tests in `internal/world`; `go test ./internal/gui` and the like run in under a second.
 
+`go test ./web` also draws the 3D model of every robot the simulator can build (each design `world.ModelSpecs` lists,
+and the stock robots) in a headless Edge or Chrome, in about 45 seconds. It fails if a model throws, or if any part
+sticks out past the frame and bumpers or above the robot's height while stowed, climbing or with a turret turned, or
+if a deployed intake reaches more than 12 in past the frame. The check itself is `web/testdata/robotcheck.js`. The test
+finds Edge or Chrome in the usual places, or uses the browser `FREEZY_TEST_BROWSER` names. Without either it's skipped,
+except in CI, where it fails. `go test -short ./...` skips it.
+
 Everything that reads bytes from outside (the FMS packets, Modbus requests, sACN datagrams, recording files) has a Go
 fuzz test. `go test ./...` runs their seed inputs. If you change one of those parsers, fuzz it for a while too, one
 target at a time:
@@ -76,7 +83,7 @@ Then test against a real arena, matching what you changed:
 | A protocol, an emulator, the arena client, match flow | `freezy-sim.exe -suite acceptance`, or the tests that cover it with `-tests` |
 | Physics, robots or the AI | `freezy-sim.exe -suite ai -bench-matches 40 -bench-seed 21`, and compare the report with the saved baseline. Then play a match or two in the GUI and watch |
 | Faults, recovery, or the director | A short soak: `freezy-sim.exe -soak 3 -soak-chaos 3` |
-| The 3D view or panels | Look at it, in the GUI, on Low and High graphics |
+| The 3D view or panels | Look at it, in the GUI, on Low and High graphics. For robot models, `go test ./web` too |
 
 For a rough front-end syntax check without Node.js, `tools/jscheck.py` (Python 3) checks bracket, string and
 template-literal balance, and unfinished imports, in the files you name:

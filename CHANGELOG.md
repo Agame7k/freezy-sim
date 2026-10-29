@@ -6,6 +6,37 @@ the scenario format or the recording format.
 
 ## [Unreleased]
 
+### Added
+- A test that draws every robot the simulator can build: each team-built design (on all three drives) and the stock
+  robots, about 7,800 in all. It runs in a headless Edge or Chrome, on every push in CI. It fails if a model throws an
+  error, or if any part sticks out past the frame and bumpers or above the robot's height while stowed, climbing or
+  with a turret turned, or if a deployed intake reaches more than 12 in past the frame. The designs come from the
+  simulator itself, so new kit parts are covered without changing the test. See
+  [DEVELOPMENT.md](docs/DEVELOPMENT.md#checks).
+
+### Changed
+- Robots look more like real ones:
+  - The bumpers are the deep red and royal blue cloth teams use, with white team numbers printed on the cloth. Before,
+    the numbers sat on a darker box and a plywood strip showed along the top.
+  - The frame tube is pre-drilled, with a row of holes every 1/2 in.
+  - Battery leads, motor power and the yellow CAN cable run from the battery and power distribution hub to every swerve
+    module or gearbox. The battery has its label and strap.
+  - The shooter hood is smoked polycarbonate, so the flywheels show through it.
+  - Swerve modules look like the COTS modules teams buy: a fixed housing with the motors, pulley cover and absolute
+    encoder on top, and a fork round the wheel that steers under it. Before, the whole module turned, motors and all.
+  - Teams differ in their shooters: about half drive the flywheels straight from the motors and half belt them up from
+    motors low on the side plates, and flywheel wheels come in black, orange, blue or grey.
+  - The team number is on both hopper side walls in white vinyl too, where the wall is big enough.
+
+### Fixed
+- A stowed intake stuck out in front of the bumpers. It now folds up inside the frame, and lies back over the hopper on
+  short robots so it stays under the robot's height.
+- An intake wider than the frame (the widest intake option in a team's design) stuck out past the side bumpers even
+  when stowed. Its roller now fits between the frame rails, and extensions slide out of the ends when it deploys.
+- On tall robots the stowed climber stuck out past the back bumper. It now stays inside the frame.
+- On the West Coast and kit drives, the dropped center wheels sank into the carpet. The center wheels now touch the
+  carpet and the outer wheels ride just above it.
+
 ## [0.1.2] - 2026-10-19
 
 ### Added

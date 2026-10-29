@@ -30,7 +30,11 @@ PLC. The hub motors run when the arena turns them on.
 
 Every team builds its own robot from a kit of parts, within a budget and for the role it wants to play: a swerve base,
 an over-the-bumper intake, a hopper, a shooter (fixed or turreted) and a climber. Teams change their designs in the pits
-between matches. The AI panel's **Robot designs** card shows each design and lets you lock or rebuild one.
+between matches. The AI panel's **Robot designs** card shows each design and lets you lock or rebuild one. In 3D each
+robot is drawn from its own parts: pre-drilled tube, wiring from the battery and power distribution hub to the motors,
+cloth bumpers with the team number printed on them, swerve modules that steer under a fixed housing, and a shooter
+driven straight or by belt. Every model stays inside its frame and bumpers and under its height when stowed; an intake
+wider than the frame slides out roller extensions as it deploys.
 
 **Driving** uses a per-module swerve force model: motor curves, gearing, current limits, the battery's voltage, and
 tread grip that depends on the weight on each wheel. Acceleration, top speed, wheel slip and pushing matches come out of

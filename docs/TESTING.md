@@ -184,5 +184,7 @@ The sim's own unit tests are plain Go tests and need no arena:
 go test ./...
 ```
 
-The packet and file parsers also have fuzz tests, and CI fuzzes each one briefly on every push. See
+They include a check that draws the 3D model of every robot design in a headless Edge or Chrome and makes sure each
+one fits inside its frame, bumpers and height. The packet and file parsers also have fuzz tests, and CI fuzzes each
+one briefly on every push. See
 [DEVELOPMENT.md](DEVELOPMENT.md#checks) for those and the rest.

@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Robot model check</title>
+  <script type="importmap">
+    { "imports": { "three": "/vendor/three/three.module.js", "three/addons/": "/vendor/three/addons/" } }
+  </script>
+</head>
+<body>
+  <!-- Opened by robots_test.go in a headless browser; a module that fails to load reports through onerror. -->
+  <script>
+    window.addEventListener("error", (event) => { window.robotCheck ??= { error: String(event.message) }; });
+  </script>
+  <script type="module" src="/testdata/robotcheck.js" onerror="window.robotCheck = { error: 'robotcheck.js failed to load' }"></script>
+</body>
+</html>
